@@ -1,26 +1,52 @@
+const fs = require('fs');
+const path = require('path');
+const createScrimModal = require('../components/createScrimModal');
+
 module.exports = async (interaction, client) => {
-  if (interaction.isChatInputCommand()) {
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-    try {
-      await command.execute(interaction, client);
-    } catch (err) {
-      console.error(err);
-      await interaction.reply({ content: '❌ Error occurred.', ephemeral: true });
+  if (interaction.isButton()) {
+    // Handle "Create Scrim" button
+    if (interaction.customId === 'create_scrim') {
+      const modal = createScrimModal();
+      return await interaction.showModal(modal);
     }
+
+    // TODO: handle other buttons later...
   }
 
-  if (interaction.isButton()) {
-    if (interaction.customId === 'create_scrim') {
-      return interaction.reply({ content: '📋 Scrim creation form coming soon!', ephemeral: true });
-    }
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === 'create_scrim_modal') {
+      const regChannel = interaction.fields.getTextInputValue('reg_channel');
+      const mentionRole = interaction.fields.getTextInputValue('mention_role');
+      const totalSlots = interaction.fields.getTextInputValue('total_slots');
+      const teamTags = interaction.fields.getTextInputValue('team_tags');
+      const regTime = interaction.fields.getTextInputValue('reg_time');
 
-    if (interaction.customId === 'edit_scrim') {
-      return interaction.reply({ content: '✏️ Edit form coming soon!', ephemeral: true });
-    }
+      // Build scrim config object
+      const scrimData = {
+        createdBy: interaction.user.id,
+        registrationChannel: regChannel,
+        mentionRole: mentionRole,
+        totalSlots: parseInt(totalSlots),
+        requiredTags: parseInt(teamTags),
+        registrationTime: regTime,
+        createdAt: new Date().toISOString()
+      };
 
-    if (interaction.customId === 'toggle_reg') {
-      return interaction.reply({ content: '🛑 Registration toggled (mock).', ephemeral: true });
+      // Save to JSON
+      const dataPath = path.join(__dirname, '..', 'data', 'scrims.json');
+      let scrimList = [];
+
+      if (fs.existsSync(dataPath)) {
+        scrimList = JSON.parse(fs.readFileSync(dataPath));
+      }
+
+      scrimList.push(scrimData);
+      fs.writeFileSync(dataPath, JSON.stringify(scrimList, null, 2));
+
+      return await interaction.reply({
+        content: `✅ Scrim created successfully for <#${regChannel}> with ${totalSlots} slots.`,
+        ephemeral: true
+      });
     }
   }
 };
