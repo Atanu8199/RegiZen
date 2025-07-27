@@ -1,12 +1,23 @@
 {
-  "name": "regizen-bot",
+  "name": "regizen",
   "version": "1.0.0",
+  "description": "RegiZen Discord Bot for BGMI Scrim & Tournament Management",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": [
+    "discord",
+    "bgmi",
+    "scrim",
+    "tournament",
+    "bot"
+  ],
+  "author": "Chat gpt",
+  "license": "MIT",
   "dependencies": {
     "discord.js": "^14.11.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "mongoose": "^7.6.0"
   }
 }
