@@ -1,48 +1,39 @@
 const {
-  PermissionFlagsBits,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  PermissionsBitField
 } = require('discord.js');
 
 module.exports = {
   name: 'rzsetup',
-  description: 'Start the Scrim Setup Panel',
-
+  description: 'Initialize scrim setup for this server',
   async execute(message, args, client) {
-    // Step 1: Permission Check (admin or role)
-    const allowedRoles = ['T3 Scrims Manager', 'Admin'];
-    const memberRoles = message.member.roles.cache.map(r => r.name);
-    const hasPermission =
-      message.member.permissions.has(PermissionFlagsBits.Administrator) ||
-      memberRoles.some(role => allowedRoles.includes(role));
-
-    if (!hasPermission) {
-      return message.reply({
-        content: '❌ You do not have permission to use this command.',
-        ephemeral: true
-      });
+    // ✅ Check for admin permissions
+    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return message.reply('❌ You must be an administrator to use this command.');
     }
 
-    // Step 2: Embed + Button
+    // 🧱 Embed for Setup Panel
     const embed = new EmbedBuilder()
-      .setTitle('🛠️ Scrim Setup Panel')
-      .setDescription('Click the button below to access scrim configuration tools.')
-      .setColor('#00b0f4')
-      .setFooter({ text: 'RegiZen Bot • Scrim Management' });
+      .setTitle('🛠️ RegiZen Scrim Control Panel')
+      .setDescription('Click **Setup Scrims** to start configuring your scrim settings.\n\nYou can later manage:\n• Registration Channel\n• Roles\n• Slot Count\n• Open Time\n• Reactions\nAnd more...')
+      .setFooter({ text: 'RegiZen • Scrim Setup' })
+      .setColor('#00b0f4');
 
-    const button = new ActionRowBuilder().addComponents(
+    // 🟢 Button Row
+    const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('setup_scrims')
-        .setLabel('Setup Scrims')
+        .setLabel('✅ Setup Scrims')
         .setStyle(ButtonStyle.Success)
     );
 
-    // Step 3: Send response
+    // ⏳ Send setup panel
     await message.channel.send({
       embeds: [embed],
-      components: [button]
+      components: [row]
     });
   }
 };
