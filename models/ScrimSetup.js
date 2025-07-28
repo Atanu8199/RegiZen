@@ -18,16 +18,16 @@ const ScrimSetupSchema = new mongoose.Schema({
     type: Number,
     default: 25
   },
-  tagCountRequired: {
+  tagCount: {
     type: Number,
-    default: 4
+    default: 1
   },
   scrimDays: {
-    type: [String],
+    type: [String], // e.g., ['Monday', 'Wednesday']
     default: []
   },
   openTime: {
-    type: String,
+    type: String, // Format: '13:00' or '01:00 PM'
     default: null
   },
   successRole: {
@@ -35,7 +35,7 @@ const ScrimSetupSchema = new mongoose.Schema({
     default: null
   },
   reactionEmojis: {
-    type: [String],
+    type: [String], // e.g., ['✅', '🔥']
     default: []
   },
   createdAt: {
