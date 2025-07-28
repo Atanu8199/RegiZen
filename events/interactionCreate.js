@@ -12,15 +12,13 @@ module.exports = async (interaction, client) => {
 
   const { guildId, customId } = interaction;
 
-  // Debug
-  console.log("Interaction received:", customId);
+  // Debug log
+  console.log("Interaction:", customId);
 
-  let setup = await ScrimSetup.findOne({ guildId });
-  if (!setup) {
-    setup = new ScrimSetup({ guildId });
-  }
+  // Fetch or create scrim setup for this guild
+  let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
 
-  // Setup Scrims Panel
+  // STEP 1: Show setup panel when clicking "Setup Scrim"
   if (customId === 'setup_scrims') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
@@ -45,48 +43,89 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       embeds: [embed],
       components: [row1, row2],
-      flags: 64 // 👈 Replaces ephemeral: true
+      flags: 1 << 6 // Use this instead of "ephemeral: true"
     });
   }
 
-  // A️⃣ Registration Channel Setup
+  // STEP A: Registration Channel
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
-      .map(c => ({
-        label: `#${c.name}`,
-        value: c.id
-      }))
-      .slice(0, 25); // Discord max select options = 25
-
-    const menu = {
-      type: 1,
-      components: [
-        {
-          type: 3,
-          custom_id: 'select_reg_channel',
-          placeholder: 'Choose a registration channel...',
-          options
-        }
-      ]
-    };
+      .map(c => ({ label: `#${c.name}`, value: c.id }))
+      .slice(0, 25);
 
     return interaction.reply({
       content: '📥 Select a registration channel:',
-      components: [menu],
-      flags: 64
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select_reg_channel',
+              placeholder: 'Choose a channel...',
+              options
+            }
+          ]
+        }
+      ],
+      flags: 1 << 6
     });
   }
 
-  // Dropdown: Registration Channel selected
-  if (interaction.isStringSelectMenu() && interaction.customId === 'select_reg_channel') {
-    const selectedChannelId = interaction.values[0];
-    setup.registrationChannel = selectedChannelId;
-    await setup.save();
+  // STEP B: Mention Role
+  if (customId === 'conf_B') {
+    const roleOptions = interaction.guild.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .map(role => ({
+        label: role.name,
+        value: role.id
+      }))
+      .slice(0, 25);
 
-    return interaction.update({
-      content: `✅ Registration channel set to <#${selectedChannelId}>.`,
-      components: []
+    return interaction.reply({
+      content: '📣 Select a mention role:',
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select_mention_role',
+              placeholder: 'Choose a role...',
+              options: roleOptions
+            }
+          ]
+        }
+      ],
+      flags: 1 << 6
     });
+  }
+
+  // Handle Select Menus
+  if (interaction.isSelectMenu()) {
+    // Handle Registration Channel selection
+    if (interaction.customId === 'select_reg_channel') {
+      const selectedChannelId = interaction.values[0];
+      setup.registrationChannel = selectedChannelId;
+      await setup.save();
+
+      return interaction.update({
+        content: `✅ Registration channel set to <#${selectedChannelId}>.`,
+        components: []
+      });
+    }
+
+    // Handle Mention Role selection
+    if (interaction.customId === 'select_mention_role') {
+      const selectedRoleId = interaction.values[0];
+      setup.mentionRole = selectedRoleId;
+      await setup.save();
+
+      return interaction.update({
+        content: `✅ Mention role set to <@&${selectedRoleId}>.`,
+        components: []
+      });
+    }
   }
 };
