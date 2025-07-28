@@ -57,7 +57,11 @@ module.exports = async (interaction, client) => {
       new ButtonBuilder().setCustomId('conf_H').setLabel('H️⃣ Reaction Emojis').setStyle(ButtonStyle.Primary)
     );
 
-    return interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: true });
+    const row3 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('save_scrim_config').setLabel('✅ Save Settings').setStyle(ButtonStyle.Success)
+    );
+
+    return interaction.reply({ embeds: [embed], components: [row1, row2, row3], ephemeral: true });
   }
 
   // 🅰️ Registration Channel
@@ -261,7 +265,30 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ content: `✅ Emojis saved: ${setup.reactionEmojis.join(' ') || 'None'}`, ephemeral: true });
   }
 
-  // ✅ Already Registered Check (e.g. on "register_team" modal)
+  // ✅ SAVE BUTTON — Check all fields before saving
+  if (customId === 'save_scrim_config') {
+    const missing = [];
+    if (!setup.channelId) missing.push('A️⃣ Registration Channel');
+    if (!setup.mentionRoleId) missing.push('B️⃣ Mention Role');
+    if (!setup.totalSlots) missing.push('C️⃣ Total Slots');
+    if (!setup.tagCountRequired) missing.push('D️⃣ Tag Count');
+    if (!setup.scrimDays || setup.scrimDays.length === 0) missing.push('E️⃣ Scrim Days');
+    if (!setup.openTime) missing.push('F️⃣ Open Time');
+    if (!setup.successRoleId) missing.push('G️⃣ Success Role');
+    if (!setup.reactionEmojis || setup.reactionEmojis.length === 0) missing.push('H️⃣ Reaction Emojis');
+
+    if (missing.length > 0) {
+      return interaction.reply({
+        content: `❌ Cannot save. Please complete the following:\n${missing.join('\n')}`,
+        ephemeral: true
+      });
+    }
+
+    await setup.save();
+    return interaction.reply({ content: '✅ All scrim settings saved successfully!', ephemeral: true });
+  }
+
+  // ✅ Team Registration Modal Submit
   if (interaction.isModalSubmit() && interaction.customId === 'submit_team_name') {
     const teamName = interaction.fields.getTextInputValue('team_name_input');
     const alreadyRegistered = await ScrimRegistration.findOne({
