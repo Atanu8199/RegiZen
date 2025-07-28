@@ -1,27 +1,15 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const mongoose = require('mongoose');
 const fs = require('fs');
+const mongoose = require('mongoose');
 
-// Create Discord client with required intents
+// Init client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent
   ]
-});
-
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('✅ MongoDB connected');
-}).catch((err) => {
-  console.error('❌ MongoDB connection failed:', err);
-  process.exit(1); // stop if MongoDB fails
 });
 
 // Load commands
@@ -39,5 +27,17 @@ for (const file of eventFiles) {
   client.on(event.name, (...args) => event.execute(...args, client));
 }
 
-// Login bot
-client.login(process.env.TOKEN);
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('✅ MongoDB connected');
+}).catch(err => {
+  console.error('❌ MongoDB connection failed:', err);
+});
+
+// Discord login
+client.login(process.env.DISCORD_TOKEN).catch(err => {
+  console.error('❌ Discord login failed:', err);
+});
