@@ -1,50 +1,76 @@
-const {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder
-} = require('discord.js');
+const { Events } = require('discord.js');
+const ScrimSetup = require('../models/ScrimSetup');
 
 module.exports = {
-  name: 'interactionCreate',
-
+  name: Events.InteractionCreate,
   async execute(interaction, client) {
-    if (!interaction.isButton()) return;
+    // Slash Command handler
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) return;
 
-    const { customId } = interaction;
+      try {
+        await command.execute(interaction, client);
+      } catch (err) {
+        console.error(err);
+        await interaction.reply({ content: '❌ There was an error executing this command.', ephemeral: true });
+      }
+    }
 
-    // When "Setup Scrims" button is clicked
-    if (customId === 'setup_scrims') {
-      const panelEmbed = new EmbedBuilder()
-        .setTitle('🎮 RegiZen Scrim Admin Panel')
-        .setDescription('Use the buttons below to manage scrims for your server.')
-        .setColor('#0da2ff');
+    // Button Handler
+    if (interaction.isButton()) {
+      const { customId, guildId } = interaction;
 
-      const row1 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('create_scrim').setLabel('🟢 Create Scrim').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('edit_settings').setLabel('🟣 Edit Settings').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('start_stop').setLabel('✅ Start/Stop Registration').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('reserve_slots').setLabel('📌 Reserve Slots').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('ban_unban').setLabel('🚫 Ban/Unban').setStyle(ButtonStyle.Danger)
-      );
+      // Load scrim setup data if needed
+      let setup = await ScrimSetup.findOne({ guildId });
 
-      const row2 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('design').setLabel('🎨 Design').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('manage_slotlist').setLabel('🗂️ Manage Slotlist').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('enable_disable').setLabel('🔄 Enable/Disable').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('need_help').setLabel('❓ Need Help').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('drop_location_panel').setLabel('🗺️ Drop Location Panel').setStyle(ButtonStyle.Secondary)
-      );
+      // If not exists, create default setup
+      if (!setup) {
+        setup = new ScrimSetup({ guildId });
+        await setup.save();
+      }
 
-      const row3 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('premium').setLabel('🪙 Free Premium').setStyle(ButtonStyle.Secondary)
-      );
+      // ✅ Main Panel Buttons
+      switch (customId) {
+        case 'create_scrim':
+          require('../components/createScrimPanel')(interaction);
+          return;
 
-      await interaction.reply({
-        embeds: [panelEmbed],
-        components: [row1, row2, row3],
-        ephemeral: true
-      });
+        case 'edit_settings':
+          return interaction.reply({ content: '🛠️ Edit Settings coming soon.', ephemeral: true });
+
+        case 'start_registration':
+          return interaction.reply({ content: '🟢 Registration started!', ephemeral: true });
+
+        case 'stop_registration':
+          return interaction.reply({ content: '🔴 Registration stopped.', ephemeral: true });
+
+        case 'view_slotlist':
+          return interaction.reply({ content: '📃 Slotlist view coming soon.', ephemeral: true });
+
+        case 'ban_user':
+          return interaction.reply({ content: '🚫 Ban system coming soon.', ephemeral: true });
+
+        case 'unban_user':
+          return interaction.reply({ content: '✅ Unban system coming soon.', ephemeral: true });
+
+        // ✅ Create Scrim A–H buttons (coming later)
+        case 'conf_A':
+        case 'conf_B':
+        case 'conf_C':
+        case 'conf_D':
+        case 'conf_E':
+        case 'conf_F':
+        case 'conf_G':
+        case 'conf_H':
+          return interaction.reply({ content: `🔧 Setup option ${customId.slice(-1)} coming soon.`, ephemeral: true });
+
+        case 'save_scrim':
+          return interaction.reply({ content: '💾 Scrim saved!', ephemeral: true });
+
+        case 'cancel_scrim':
+          return interaction.reply({ content: '❌ Scrim setup cancelled.', ephemeral: true });
+      }
     }
   }
 };
