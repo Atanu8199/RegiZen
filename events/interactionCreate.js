@@ -1,13 +1,19 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType
+} = require('discord.js');
 const ScrimSetup = require('../models/ScrimSetup');
 
 module.exports = async (interaction, client) => {
   if (!interaction.isButton()) return;
 
-  const { guildId, customId, channel } = interaction;
+  const { guildId, customId, channel, user } = interaction;
   let setup = await ScrimSetup.findOne({ guildId });
 
-  // ❗ If no setup found, create default
+  // 🔧 Initialize if not found
   if (!setup) {
     setup = await ScrimSetup.create({
       guildId,
@@ -23,125 +29,101 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // 🔘 Panel Buttons (Create, Edit, etc.)
+  // 🔘 MAIN PANEL BUTTONS
   if (customId === 'create_scrim') {
-    await interaction.reply({
-      content: '🟢 Create Scrim button clicked! (Setup form will appear here)',
-      ephemeral: true
-    });
+    await interaction.deferUpdate();
+    await sendScrimConfigPanel(channel, setup, user);
+    return;
   }
 
   if (customId === 'edit_scrim') {
     await interaction.reply({
-      content: '🟣 Edit Settings clicked! (Feature coming soon)',
+      content: '🛠 Edit settings feature coming soon.',
       ephemeral: true
     });
+    return;
   }
 
   if (customId === 'toggle_reg') {
     await interaction.reply({
-      content: '✅ Start/Stop Registration clicked! (Feature coming soon)',
+      content: '🔄 Start/Stop Registration feature coming soon.',
       ephemeral: true
     });
+    return;
   }
 
   if (customId === 'manage_slotlist') {
     await interaction.reply({
-      content: '📂 Manage Slotlist clicked! (Feature coming soon)',
+      content: '📂 Slotlist Manager coming soon.',
       ephemeral: true
     });
-  }
-
-  if (customId === 'reserve_slots') {
-    await interaction.reply({
-      content: '📌 Reserve Slots clicked! (Feature coming soon)',
-      ephemeral: true
-    });
-  }
-
-  if (customId === 'ban_unban') {
-    await interaction.reply({
-      content: '🚫 Ban/Unban clicked! (Feature coming soon)',
-      ephemeral: true
-    });
-  }
-
-  if (customId === 'enable_disable_scrim') {
-    await interaction.reply({
-      content: '🔄 Enable/Disable clicked! (Feature coming soon)',
-      ephemeral: true
-    });
-  }
-
-  if (customId === 'design_scrim') {
-    await interaction.reply({
-      content: '🎨 Design clicked! (Feature coming soon)',
-      ephemeral: true
-    });
-  }
-
-  if (customId === 'drop_location') {
-    await interaction.reply({
-      content: '🗺️ Drop Location clicked! (Feature coming soon)',
-      ephemeral: true
-    });
+    return;
   }
 
   if (customId === 'scrim_help') {
     await interaction.reply({
-      content: '❓ Help clicked! You can set up scrims using the buttons A to H.',
+      content: '❓ This panel lets you configure scrim settings. Click each A–H button to set the value.',
       ephemeral: true
     });
+    return;
   }
 
-  // 🅰 A Button – Set Registration Channel
+  // 🅰 Set Registration Channel
   if (customId === 'set_reg_channel') {
-    await interaction.reply({ content: '📢 Mention the channel where you want to take registrations.', ephemeral: true });
+    await interaction.reply({
+      content: '🔧 Mention the channel for registrations (e.g. #registrations)',
+      ephemeral: true
+    });
 
-    const filter = m => m.author.id === interaction.user.id;
+    const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-
     if (!collected || collected.size === 0) return;
-    const userMsg = collected.first();
-    const mentionedChannel = userMsg.mentions.channels.first();
 
-    if (!mentionedChannel || mentionedChannel.type !== ChannelType.GuildText) {
-      await userMsg.reply('❌ Invalid channel. Please mention a proper #text-channel.');
+    const msg = collected.first();
+    const mentioned = msg.mentions.channels.first();
+
+    if (!mentioned || mentioned.type !== ChannelType.GuildText) {
+      await msg.reply('❌ Invalid. Please mention a text channel.');
       return;
     }
 
-    setup.regChannel = mentionedChannel.id;
+    setup.regChannel = mentioned.id;
     await setup.save();
-    await updateScrimEmbed(channel, setup);
-  }
-
-  // ❌ Cancel Button
-  if (customId === 'cancel_scrim') {
-    await interaction.update({ content: '❌ Scrim creation cancelled.', embeds: [], components: [] });
-    return;
+    await sendScrimConfigPanel(channel, setup, user);
   }
 
   // ✅ Save Button
   if (customId === 'save_scrim') {
-    await interaction.reply({ content: '✅ Scrim settings saved successfully.', ephemeral: true });
+    await interaction.reply({ content: '✅ Scrim settings saved.', ephemeral: true });
+    return;
+  }
+
+  // ❌ Cancel Button
+  if (customId === 'cancel_scrim') {
+    await interaction.update({
+      content: '❌ Scrim setup cancelled.',
+      embeds: [],
+      components: []
+    });
     return;
   }
 };
 
-// 🔧 Helper Function: Update Embed Panel
-async function updateScrimEmbed(channel, setup) {
+// 🔧 Function to send full A–H config panel
+async function sendScrimConfigPanel(channel, setup, user) {
   const embed = new EmbedBuilder()
-    .setTitle('Enter details & Press Save')
-    .setDescription('Scrim Creation is a piece of cake through dashboard, [Click Me](https://example.com)')
-    .addFields(
-      { name: '🅰 Reg. Channel:', value: setup.regChannel ? `<#${setup.regChannel}>` : 'Not–Set', inline: true },
-      { name: '🅱 Slotlist Channel:', value: setup.slotlistChannel ? `<#${setup.slotlistChannel}>` : 'Not–Set', inline: true },
-      { name: '🇨 Success Role:', value: setup.successRole ? `<@&${setup.successRole}>` : 'Not–Set', inline: true },
-      { name: '🇩 Req. Mentions:', value: `${setup.mentionsRequired}`, inline: true },
-      { name: '🇪 Total Slots:', value: setup.totalSlots ? `${setup.totalSlots}` : 'Not–Set', inline: true },
-      { name: '🇫 Open Time:', value: setup.openTime || 'Not–Set', inline: true },
-      { name: '🇬 Scrim Days:', value: setup.scrimDays.length ? setup.scrimDays.join(', ') : 'Mo, Tu, We, Th, Fr, Sa, Su', inline: true },
-      { name: '🇭 Reactions:', value: setup.reactions.join(', '), inline: true }
+    .setTitle('📋 Scrim Setup Form')
+    .setDescription(
+      `| Button | Kaam                        | Status   |
+| ------ | --------------------------- | -------- |
+| 🅰️ A  | Registration Channel select | ${setup.regChannel ? '✅ Done' : '⏳'}   |
+| 🅱️ B  | Slotlist Channel select     | ${setup.slotlistChannel ? '✅ Done' : '🔄 Next?'} |
+| 🇨 C   | Success Role select         | ${setup.successRole ? '✅ Done' : '⏳'}        |
+| 🇩 D   | Mentions Required           | ${setup.mentionsRequired ? '✅ Done' : '⏳'}        |
+| 🇪 E   | Total Slots                 | ${setup.totalSlots ? '✅ Done' : '⏳'}        |
+| 🇫 F   | Registration Open Time      | ${setup.openTime ? '✅ Done' : '⏳'}        |
+| 🇬 G   | Scrim Days (multi select)   | ${setup.scrimDays.length > 0 ? '✅ Done' : '⏳'}        |
+| 🇭 H   | Reaction Emojis             | ${setup.reactions.length > 0 ? '✅ Done' : '⏳'}        |`
     )
     .setColor('Blue');
 
@@ -161,16 +143,9 @@ async function updateScrimEmbed(channel, setup) {
     new ButtonBuilder().setCustomId('save_scrim').setLabel('Save Scrim').setStyle(ButtonStyle.Success)
   );
 
-  try {
-    if (setup.messageId) {
-      const oldMsg = await channel.messages.fetch(setup.messageId);
-      await oldMsg.edit({ embeds: [embed], components: [row1, row2] });
-    } else {
-      const msg = await channel.send({ embeds: [embed], components: [row1, row2] });
-      setup.messageId = msg.id;
-      await setup.save();
-    }
-  } catch (err) {
-    console.error('❌ Embed update failed:', err.message);
-  }
+  await channel.send({
+    content: `🔧 <@${user.id}> started scrim setup.`,
+    embeds: [embed],
+    components: [row1, row2]
+  });
 }
