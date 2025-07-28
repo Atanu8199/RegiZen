@@ -3,328 +3,311 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ChannelType
+  ChannelType,
+  StringSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
+
 const ScrimSetup = require('../models/ScrimSetup');
+const ScrimRegistration = require('../models/ScrimRegistration');
 
 module.exports = async (interaction, client) => {
   if (!interaction.isButton() && !interaction.isSelectMenu() && !interaction.isModalSubmit()) return;
 
-  const { guildId, customId } = interaction;
-  let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
+  const { guildId, customId, channel, user } = interaction;
 
-  // 🧷 Scrim Admin Panel buttons
-  if (customId === 'setup_scrims') {
-    const panelEmbed = new EmbedBuilder()
-      .setTitle('📢 Scrim Admin Panel')
-      .setDescription('Select an option below to manage your scrims.')
-      .setColor('#00b0f4')
-      .setFooter({ text: 'RegiZen • Scrim Control' });
+  // ========== Handle Registration ==========
+  if (customId === 'register_scrim') {
+    const userId = user.id;
+    const channelId = channel.id;
 
-    const panelRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('create_scrim').setLabel('📋 Create Scrim').setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId('edit_scrim').setLabel('⚙️ Edit Settings').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('toggle_registration').setLabel('🟢 Start/Stop Registration').setStyle(ButtonStyle.Primary)
-    );
+    const alreadyRegistered = await ScrimRegistration.findOne({ guildId, channelId, userId });
+    if (alreadyRegistered) {
+      return interaction.reply({
+        content: '❌ You have already registered in this scrim.',
+        ephemeral: true,
+      });
+    }
+
+    // ✅ Save new registration
+    await ScrimRegistration.create({
+      guildId,
+      channelId,
+      userId,
+      timestamp: Date.now(),
+    });
 
     return interaction.reply({
-      embeds: [panelEmbed],
-      components: [panelRow],
-      ephemeral: true
+      content: '✅ You have successfully registered for this scrim!',
+      ephemeral: true,
     });
   }
 
-  // 📋 Create Scrim → Show Steps A–H
+  // ========== Scrim Setup Panel ==========
+  if (customId === 'setup_scrims') {
+    const embed = new EmbedBuilder()
+      .setTitle('📋 RegiZen Scrim Setup Panel')
+      .setDescription('Please select an option below to configure or manage scrims.')
+      .setColor('Blurple');
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('create_scrim').setLabel('🆕 Create Scrim').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId('edit_settings').setLabel('⚙️ Edit Settings').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('toggle_registration').setLabel('📥 Start/Stop Registration').setStyle(ButtonStyle.Secondary)
+    );
+
+    return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+  }
+
+  // ========== Create Scrim: Show A–H Panel ==========
   if (customId === 'create_scrim') {
     const embed = new EmbedBuilder()
-      .setTitle('📋 Create Scrim Configuration')
-      .setDescription(`Click the buttons below to configure your scrim.\n\nA️⃣ Registration Channel\nB️⃣ Mention Role\nC️⃣ Total Slots\nD️⃣ Tag Count Required\nE️⃣ Scrim Day(s)\nF️⃣ Open Time\nG️⃣ Success Role\nH️⃣ Reaction Emojis`)
-      .setFooter({ text: 'RegiZen • Scrim Setup' })
-      .setColor('#00b0f4');
+      .setTitle('🛠️ Scrim Configuration')
+      .setDescription(`
+A. Registration Channel
+B. Mention Role
+C. Total Slots
+D. Team Tag Count Required
+E. Scrim Day(s)
+F. Registration Open Time
+G. Success Role
+H. Reaction Emojis
+      `)
+      .setColor('Orange');
 
-    const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('conf_A').setLabel('A️⃣ Registration Channel').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_B').setLabel('B️⃣ Mention Role').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_C').setLabel('C️⃣ Total Slots').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_D').setLabel('D️⃣ Tag Count').setStyle(ButtonStyle.Primary)
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('step_a').setLabel('A').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_b').setLabel('B').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_c').setLabel('C').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_d').setLabel('D').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_e').setLabel('E').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_f').setLabel('F').setStyle(ButtonStyle.Secondary)
     );
 
     const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('conf_E').setLabel('E️⃣ Scrim Day(s)').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_F').setLabel('F️⃣ Open Time').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_G').setLabel('G️⃣ Success Role').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('conf_H').setLabel('H️⃣ Reaction Emojis').setStyle(ButtonStyle.Primary)
+      new ButtonBuilder().setCustomId('step_g').setLabel('G').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('step_h').setLabel('H').setStyle(ButtonStyle.Secondary)
     );
 
-    return interaction.reply({
-      embeds: [embed],
-      components: [row1, row2],
-      ephemeral: true
-    });
+    return interaction.reply({ embeds: [embed], components: [row, row2], ephemeral: true });
   }
 
-  // A – H configuration steps
-  // A: Registration Channel
-  if (customId === 'conf_A') {
-    const options = interaction.guild.channels.cache
-      .filter(c => c.type === ChannelType.GuildText)
-      .map(c => ({ label: `#${c.name}`, value: c.id }))
-      .slice(0, 25);
-
-    return interaction.reply({
-      content: '📥 Select a registration channel:',
-      ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_reg_channel',
-              placeholder: 'Choose a channel...',
-              options
-            }
-          ]
-        }
-      ]
-    });
+  // ========== Individual Config Steps ==========
+  let setup = await ScrimSetup.findOne({ guildId, channelId: channel.id });
+  if (!setup) {
+    setup = new ScrimSetup({ guildId, channelId: channel.id });
   }
 
-  if (interaction.customId === 'select_reg_channel') {
-    setup.registrationChannel = interaction.values[0];
+  // A. Registration Channel (current channel)
+  if (customId === 'step_a') {
+    setup.channelId = channel.id;
     await setup.save();
-    return interaction.update({
-      content: `✅ Registration channel set to <#${setup.registrationChannel}>`,
-      components: []
-    });
-  }
-
-  // B: Mention Role
-  if (customId === 'conf_B') {
-    const options = interaction.guild.roles.cache
-      .filter(r => r.name !== '@everyone')
-      .map(r => ({ label: r.name, value: r.id }))
-      .slice(0, 25);
 
     return interaction.reply({
-      content: '🔔 Select a mention role:',
+      content: `✅ Registration channel set to <#${channel.id}>`,
       ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_mention_role',
-              placeholder: 'Choose a role...',
-              options
-            }
-          ]
-        }
-      ]
     });
   }
 
-  if (interaction.customId === 'select_mention_role') {
-    setup.mentionRole = interaction.values[0];
+  // B. Mention Role
+  if (customId === 'step_b') {
+    const roles = interaction.guild.roles.cache.map(role => ({
+      label: role.name,
+      value: role.id,
+    })).slice(0, 25);
+
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('select_mention_role')
+      .setPlaceholder('Select mention role')
+      .addOptions(roles);
+
+    return interaction.reply({
+      components: [new ActionRowBuilder().addComponents(menu)],
+      ephemeral: true,
+    });
+  }
+
+  if (customId === 'select_mention_role') {
+    const roleId = interaction.values[0];
+    setup.mentionRoleId = roleId;
     await setup.save();
+
     return interaction.update({
-      content: `✅ Mention role set to <@&${setup.mentionRole}>`,
-      components: []
+      content: `✅ Mention role set to <@&${roleId}>`,
+      components: [],
     });
   }
 
-  // C: Total Slots
-  if (customId === 'conf_C') {
-    return interaction.showModal({
-      custom_id: 'modal_total_slots',
-      title: 'Total Slots',
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 4,
-              custom_id: 'total_slots_input',
-              style: 1,
-              label: 'Enter number of slots (Max 25)',
-              placeholder: 'Example: 16, 20, 25',
-              required: true
-            }
-          ]
-        }
-      ]
-    });
+  // C. Total Slots
+  if (customId === 'step_c') {
+    const modal = new ModalBuilder()
+      .setCustomId('modal_slots')
+      .setTitle('Total Slots')
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('slot_input')
+            .setLabel('Enter total number of slots')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
+      );
+
+    return interaction.showModal(modal);
   }
 
-  if (interaction.customId === 'modal_total_slots') {
-    const val = interaction.fields.getTextInputValue('total_slots_input');
-    const num = parseInt(val);
-    if (isNaN(num) || num < 1 || num > 25) {
-      return interaction.reply({ content: '❌ Please enter a valid number (1–25)', ephemeral: true });
+  if (customId === 'modal_slots') {
+    const slots = parseInt(interaction.fields.getTextInputValue('slot_input'));
+    if (isNaN(slots) || slots < 1) {
+      return interaction.reply({ content: '❌ Invalid slot number.', ephemeral: true });
     }
-    setup.totalSlots = num;
+
+    setup.totalSlots = slots;
     await setup.save();
-    return interaction.reply({ content: `✅ Total slots set to: **${num}**`, ephemeral: true });
+    return interaction.reply({ content: `✅ Total slots set to ${slots}`, ephemeral: true });
   }
 
-  // D: Tag Count
-  if (customId === 'conf_D') {
-    return interaction.reply({
-      content: '🧩 Select how many members must tag when registering:',
-      ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_tag_count',
-              placeholder: 'Choose...',
-              options: ['1', '2', '3', '4'].map(n => ({ label: n, value: n }))
-            }
-          ]
-        }
-      ]
-    });
+  // D. Tag Count Required
+  if (customId === 'step_d') {
+    const modal = new ModalBuilder()
+      .setCustomId('modal_tags')
+      .setTitle('Tag Count Required')
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('tag_input')
+            .setLabel('Enter required tag count (1-4)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
+      );
+
+    return interaction.showModal(modal);
   }
 
-  if (interaction.customId === 'select_tag_count') {
-    setup.tagCount = parseInt(interaction.values[0]);
+  if (customId === 'modal_tags') {
+    const tags = parseInt(interaction.fields.getTextInputValue('tag_input'));
+    if (isNaN(tags) || tags < 1 || tags > 4) {
+      return interaction.reply({ content: '❌ Invalid tag count.', ephemeral: true });
+    }
+
+    setup.tagCountRequired = tags;
     await setup.save();
-    return interaction.update({
-      content: `✅ Tag count set to: **${setup.tagCount}**`,
-      components: []
-    });
+    return interaction.reply({ content: `✅ Required tag count set to ${tags}`, ephemeral: true });
   }
 
-  // E: Scrim Days
-  if (customId === 'conf_E') {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // E. Scrim Day(s)
+  if (customId === 'step_e') {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => ({
+      label: d,
+      value: d,
+    }));
+
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('select_scrim_days')
+      .setPlaceholder('Select scrim days')
+      .setMinValues(1)
+      .setMaxValues(7)
+      .addOptions(days);
+
     return interaction.reply({
-      content: '📅 Select scrim day(s):',
+      components: [new ActionRowBuilder().addComponents(menu)],
       ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_scrim_days',
-              min_values: 1,
-              max_values: 7,
-              placeholder: 'Choose days...',
-              options: days.map(d => ({ label: d, value: d }))
-            }
-          ]
-        }
-      ]
     });
   }
 
-  if (interaction.customId === 'select_scrim_days') {
+  if (customId === 'select_scrim_days') {
     setup.scrimDays = interaction.values;
     await setup.save();
+
     return interaction.update({
-      content: `✅ Scrim days set to: **${setup.scrimDays.join(', ')}**`,
-      components: []
+      content: `✅ Scrim days set: ${interaction.values.join(', ')}`,
+      components: [],
     });
   }
 
-  // F: Open Time
-  if (customId === 'conf_F') {
-    return interaction.showModal({
-      custom_id: 'modal_open_time',
-      title: 'Open Time',
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 4,
-              custom_id: 'open_time_input',
-              style: 1,
-              label: 'Enter time (e.g. 1:00 PM)',
-              required: true
-            }
-          ]
-        }
-      ]
-    });
+  // F. Registration Open Time
+  if (customId === 'step_f') {
+    const modal = new ModalBuilder()
+      .setCustomId('modal_open_time')
+      .setTitle('Open Time')
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('time_input')
+            .setLabel('Enter open time (e.g., 12:30 PM)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
+      );
+
+    return interaction.showModal(modal);
   }
 
-  if (interaction.customId === 'modal_open_time') {
-    const val = interaction.fields.getTextInputValue('open_time_input');
-    if (!val || val.length < 3) {
-      return interaction.reply({ content: '❌ Invalid time format.', ephemeral: true });
-    }
-    setup.openTime = val;
+  if (customId === 'modal_open_time') {
+    const openTime = interaction.fields.getTextInputValue('time_input');
+    setup.openTime = openTime;
     await setup.save();
-    return interaction.reply({ content: `✅ Open time set to: **${val}**`, ephemeral: true });
+
+    return interaction.reply({ content: `✅ Registration open time set to ${openTime}`, ephemeral: true });
   }
 
-  // G: Success Role
-  if (customId === 'conf_G') {
-    const options = interaction.guild.roles.cache
-      .filter(r => r.name !== '@everyone')
-      .map(r => ({ label: r.name, value: r.id }))
-      .slice(0, 25);
+  // G. Success Role
+  if (customId === 'step_g') {
+    const roles = interaction.guild.roles.cache.map(role => ({
+      label: role.name,
+      value: role.id,
+    })).slice(0, 25);
+
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('select_success_role')
+      .setPlaceholder('Select success role')
+      .addOptions(roles);
 
     return interaction.reply({
-      content: '🏷️ Select a success role (given after registration):',
+      components: [new ActionRowBuilder().addComponents(menu)],
       ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_success_role',
-              placeholder: 'Choose a role...',
-              options
-            }
-          ]
-        }
-      ]
     });
   }
 
-  if (interaction.customId === 'select_success_role') {
-    setup.successRole = interaction.values[0];
+  if (customId === 'select_success_role') {
+    const roleId = interaction.values[0];
+    setup.successRoleId = roleId;
     await setup.save();
+
     return interaction.update({
-      content: `✅ Success role set to: <@&${setup.successRole}>`,
-      components: []
+      content: `✅ Success role set to <@&${roleId}>`,
+      components: [],
     });
   }
 
-  // H: Reaction Emojis
-  if (customId === 'conf_H') {
-    return interaction.showModal({
-      custom_id: 'modal_reaction_emojis',
-      title: 'Reaction Emojis',
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 4,
-              custom_id: 'reaction_emojis_input',
-              style: 1,
-              label: 'Enter custom emojis (comma-separated)',
-              placeholder: 'e.g. 🔥,✅,💀',
-              required: false
-            }
-          ]
-        }
-      ]
-    });
+  // H. Reaction Emojis
+  if (customId === 'step_h') {
+    const modal = new ModalBuilder()
+      .setCustomId('modal_emojis')
+      .setTitle('Custom Emojis')
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('emoji_input')
+            .setLabel('Enter emojis separated by space or comma')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false)
+        )
+      );
+
+    return interaction.showModal(modal);
   }
 
-  if (interaction.customId === 'modal_reaction_emojis') {
-    const emojis = interaction.fields.getTextInputValue('reaction_emojis_input') || '';
-    setup.reactionEmojis = emojis.split(',').map(e => e.trim()).filter(Boolean);
+  if (customId === 'modal_emojis') {
+    const emojiText = interaction.fields.getTextInputValue('emoji_input');
+    const emojis = emojiText.split(/[\s,]+/).filter(e => e.length > 0);
+
+    setup.reactionEmojis = emojis;
     await setup.save();
-    return interaction.reply({ content: `✅ Reaction emojis saved: ${setup.reactionEmojis.join(' ') || 'None'}`, ephemeral: true });
+
+    return interaction.reply({ content: `✅ Reaction emojis set: ${emojis.join(' ')}`, ephemeral: true });
   }
 };
