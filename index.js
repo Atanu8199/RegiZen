@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 require('dotenv').config();
 
+// ✅ Create client with necessary intents
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -12,7 +13,7 @@ const client = new Client({
   ]
 });
 
-// Load commands
+// ✅ Load all slash/message commands from /commands folder
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
@@ -21,7 +22,7 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-// Load events
+// ✅ Load all events from /events folder
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 
 for (const file of eventFiles) {
@@ -33,7 +34,12 @@ for (const file of eventFiles) {
   }
 }
 
-// Connect to MongoDB
+// ✅ IMPORTANT: Manually handle interactionCreate for buttons, dropdowns
+client.on('interactionCreate', interaction => {
+  require('./events/interactionCreate')(interaction, client);
+});
+
+// ✅ Connect to MongoDB and login the bot
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -41,7 +47,6 @@ mongoose
   })
   .then(() => {
     console.log('🟢 Connected to MongoDB');
-    // Login bot after DB is connected
     client.login(process.env.TOKEN);
   })
   .catch(err => console.error('🔴 MongoDB connection error:', err));
