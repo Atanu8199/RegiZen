@@ -1,23 +1,24 @@
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
-    console.log('📨 messageCreate event fired');
+    if (message.author.bot || !message.guild) return;
 
-    if (!message.content.startsWith('!') || message.author.bot) return;
+    const prefix = '!';
 
-    const args = message.content.slice(1).trim().split(/ +/g);
-    const cmd = args.shift().toLowerCase();
+    if (!message.content.startsWith(prefix)) return;
 
-    const command = client.commands.get(cmd);
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const cmdName = args.shift().toLowerCase();
+
+    const command = client.commands.get(cmdName);
     if (!command) return;
 
-    console.log(`⚙️ Running command: ${command.name} by ${message.author.username}`);
-
     try {
+      console.log(`⚙️ Running command: ${cmdName} by ${message.author.tag}`);
       await command.execute(message, args, client);
     } catch (err) {
       console.error(err);
-      message.reply('⚠️ There was an error executing that command.');
+      message.reply('❌ There was an error executing that command.');
     }
   }
 };
