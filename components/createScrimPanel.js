@@ -1,44 +1,41 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-function createScrimPanel(data = {}) {
+module.exports = async (interaction) => {
   const embed = new EmbedBuilder()
-    .setTitle('📋 Enter details & Press Save')
-    .setDescription('Scrim Creation is a piece of cake through dashboard, *Click Me*')
-    .addFields(
-      { name: '🅰 Reg. Channel:', value: data.regChannel || 'Not–Set', inline: true },
-      { name: '🅱 Slotlist Channel:', value: data.slotlistChannel || 'Not–Set', inline: true },
-      { name: '🅲 Success Role:', value: data.successRole || 'Not–Set', inline: true },
-      { name: '🅳 Req. Mentions:', value: data.requiredMentions?.toString() || 'Not–Set', inline: true },
-      { name: '🅴 Total Slots:', value: data.totalSlots?.toString() || 'Not–Set', inline: true },
-      { name: '🅵 Open Time:', value: data.openTime || 'Not–Set', inline: true },
-      { name: '🅶 Scrim Days:', value: data.scrimDays?.join(', ') || 'Not–Set', inline: true },
-      { name: '🅷 Reactions:', value: data.reactions?.join(' ') || '✅ ❌', inline: true }
+    .setTitle('🟢 Create Scrim Setup Panel')
+    .setColor('#00b0f4')
+    .setDescription(
+      `A. 📢 **Registration Channel:** _Not set_\n` +
+      `B. 🏷️ **Mention Role:** _Not set_\n` +
+      `C. 🔢 **Total Slots:** _25_\n` +
+      `D. 🧩 **Team Tags Required:** _1_\n` +
+      `E. 📆 **Scrim Days:** _Not set_\n` +
+      `F. ⏰ **Open Time:** _Not set_\n` +
+      `G. ✅ **Success Role:** _Not set_\n` +
+      `H. 🎭 **Custom Emojis:** _Optional_\n\n` +
+      `🔘 Use the buttons below to configure each setting.`
     )
-    .setColor('#00aaff');
+    .setFooter({ text: 'RegiZen • Scrim Config Builder' });
 
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('set_a').setLabel('A').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_b').setLabel('B').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_c').setLabel('C').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_d').setLabel('D').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_e').setLabel('E').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('conf_A').setLabel('A').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_B').setLabel('B').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_C').setLabel('C').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_D').setLabel('D').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_E').setLabel('E').setStyle(ButtonStyle.Primary)
   );
 
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('set_f').setLabel('F').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_g').setLabel('G').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('set_h').setLabel('H').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('cancel_scrim').setLabel('Cancel').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId('conf_F').setLabel('F').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_G').setLabel('G').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('conf_H').setLabel('H').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('save_scrim').setLabel('✅ Save').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('cancel_scrim').setLabel('❌ Cancel').setStyle(ButtonStyle.Danger)
   );
 
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('save_scrim').setLabel('Save Scrim').setStyle(ButtonStyle.Success)
-  );
-
-  return {
-    embed,
-    components: [row1, row2, row3]
-  };
-}
-
-module.exports = createScrimPanel;
+  await interaction.reply({
+    embeds: [embed],
+    components: [row1, row2],
+    ephemeral: true // Optional: only show to admin
+  });
+};
