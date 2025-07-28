@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const ScrimSetupSchema = new mongoose.Schema({
+const scrimSetupSchema = new mongoose.Schema({
   guildId: {
     type: String,
     required: true,
@@ -23,11 +23,11 @@ const ScrimSetupSchema = new mongoose.Schema({
     default: 1
   },
   scrimDays: {
-    type: [String], // e.g., ['Monday', 'Wednesday']
+    type: [String],
     default: []
   },
   openTime: {
-    type: String, // Format: '13:00' or '01:00 PM'
+    type: String,
     default: null
   },
   successRole: {
@@ -35,13 +35,9 @@ const ScrimSetupSchema = new mongoose.Schema({
     default: null
   },
   reactionEmojis: {
-    type: [String], // e.g., ['✅', '🔥']
+    type: [String],
     default: []
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-});
+}, { timestamps: true });
 
-module.exports = mongoose.model('ScrimSetup', ScrimSetupSchema);
+module.exports = mongoose.model('ScrimSetup', scrimSetupSchema);
