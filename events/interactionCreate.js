@@ -3,11 +3,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ChannelType,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  StringSelectMenuBuilder
+  ChannelType
 } = require('discord.js');
 const ScrimSetup = require('../models/ScrimSetup');
 
@@ -16,11 +12,11 @@ module.exports = async (interaction, client) => {
 
   const { guildId, customId } = interaction;
 
-  console.log("Interaction Triggered:", customId);
+  console.log("Interaction:", customId);
 
   let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
 
-  // Main Scrim Setup Panel
+  // Show Scrim Setup Panel
   if (customId === 'setup_scrims') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
@@ -45,30 +41,37 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       embeds: [embed],
       components: [row1, row2],
-      ephemeral: true
+      flags: 1 << 6 // ephemeral
     });
   }
 
-  // A: Select Registration Channel
+  // A️⃣ Select Registration Channel
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
       .map(c => ({ label: `#${c.name}`, value: c.id }))
       .slice(0, 25);
 
-    const menu = new StringSelectMenuBuilder()
-      .setCustomId('select_reg_channel')
-      .setPlaceholder('Choose a registration channel...')
-      .addOptions(options);
-
     return interaction.reply({
       content: '📥 Select a registration channel:',
-      ephemeral: true,
-      components: [new ActionRowBuilder().addComponents(menu)]
+      flags: 1 << 6,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select_reg_channel',
+              placeholder: 'Choose a channel...',
+              options
+            }
+          ]
+        }
+      ]
     });
   }
 
-  if (interaction.isSelectMenu() && customId === 'select_reg_channel') {
+  if (interaction.isSelectMenu() && interaction.customId === 'select_reg_channel') {
     const selectedChannelId = interaction.values[0];
     setup.registrationChannel = selectedChannelId;
     await setup.save();
@@ -79,108 +82,125 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // B: Mention Role
+  // B️⃣ Select Mention Role
   if (customId === 'conf_B') {
-    const roleOptions = interaction.guild.roles.cache
-      .filter(role => role.name !== '@everyone')
-      .map(role => ({ label: role.name, value: role.id }))
+    const options = interaction.guild.roles.cache
+      .filter(r => r.name !== '@everyone')
+      .map(r => ({ label: r.name, value: r.id }))
       .slice(0, 25);
 
-    const menu = new StringSelectMenuBuilder()
-      .setCustomId('select_mention_role')
-      .setPlaceholder('Select a role to mention')
-      .addOptions(roleOptions);
-
     return interaction.reply({
-      content: '🔔 Select a role to mention during registration:',
-      ephemeral: true,
-      components: [new ActionRowBuilder().addComponents(menu)]
+      content: '🔔 Select a role to mention when scrim opens:',
+      flags: 1 << 6,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select_mention_role',
+              placeholder: 'Choose a role...',
+              options
+            }
+          ]
+        }
+      ]
     });
   }
 
-  if (interaction.isSelectMenu() && customId === 'select_mention_role') {
-    const selectedRoleId = interaction.values[0];
-    setup.mentionRole = selectedRoleId;
+  if (interaction.isSelectMenu() && interaction.customId === 'select_mention_role') {
+    const roleId = interaction.values[0];
+    setup.mentionRole = roleId;
     await setup.save();
 
     return interaction.update({
-      content: `✅ Mention role set to <@&${selectedRoleId}>.`,
+      content: `✅ Mention role set to <@&${roleId}>.`,
       components: []
     });
   }
 
-  // C: Total Slots
+  // C️⃣ Total Slots Input
   if (customId === 'conf_C') {
-    const modal = new ModalBuilder()
-      .setCustomId('set_total_slots')
-      .setTitle('C️⃣ Set Total Slots');
-
-    const slotInput = new TextInputBuilder()
-      .setCustomId('total_slots_input')
-      .setLabel('Enter total slots (max 25)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(slotInput));
-
-    return interaction.showModal(modal);
+    return interaction.showModal({
+      custom_id: 'modal_total_slots',
+      title: 'Enter Total Slots (Max 25)',
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 4,
+              custom_id: 'total_slots_input',
+              style: 1,
+              label: 'Total Team Slots',
+              placeholder: 'e.g. 16, 20, 25',
+              required: true
+            }
+          ]
+        }
+      ]
+    });
   }
 
-  if (interaction.isModalSubmit() && customId === 'set_total_slots') {
-    const input = interaction.fields.getTextInputValue('total_slots_input');
-    const totalSlots = parseInt(input);
+  if (interaction.isModalSubmit() && interaction.customId === 'modal_total_slots') {
+    const value = interaction.fields.getTextInputValue('total_slots_input');
+    const total = parseInt(value);
 
-    if (isNaN(totalSlots) || totalSlots < 1 || totalSlots > 25) {
+    if (isNaN(total) || total < 1 || total > 25) {
       return interaction.reply({
         content: '❌ Please enter a valid number between 1 and 25.',
         ephemeral: true
       });
     }
 
-    setup.totalSlots = totalSlots;
+    setup.totalSlots = total;
     await setup.save();
 
     return interaction.reply({
-      content: `✅ Total slots set to **${totalSlots}**.`,
+      content: `✅ Total slots set to: **${total}**`,
       ephemeral: true
     });
   }
 
-  // D: Tag Count Required
-  if (customId === 'conf_D') {
-    const modal = new ModalBuilder()
-      .setCustomId('set_tag_count')
-      .setTitle('D️⃣ Set Tag Count Required');
-
-    const tagInput = new TextInputBuilder()
-      .setCustomId('tag_count_input')
-      .setLabel('Enter tag count (1 to 4)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(1);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(tagInput));
-
-    return interaction.showModal(modal);
+  // E️⃣ Scrim Day(s)
+  if (customId === 'conf_E') {
+    return interaction.reply({
+      content: '📅 Select the days for scrims:',
+      ephemeral: true,
+      components: [
+        {
+          type: 1,
+          components: [
+            {
+              type: 3,
+              custom_id: 'select_scrim_days',
+              placeholder: 'Choose scrim days...',
+              min_values: 1,
+              max_values: 7,
+              options: [
+                { label: 'Monday', value: 'Monday' },
+                { label: 'Tuesday', value: 'Tuesday' },
+                { label: 'Wednesday', value: 'Wednesday' },
+                { label: 'Thursday', value: 'Thursday' },
+                { label: 'Friday', value: 'Friday' },
+                { label: 'Saturday', value: 'Saturday' },
+                { label: 'Sunday', value: 'Sunday' }
+              ]
+            }
+          ]
+        }
+      ]
+    });
   }
 
-  if (interaction.isModalSubmit() && customId === 'set_tag_count') {
-    const input = interaction.fields.getTextInputValue('tag_count_input');
-    const tagCount = parseInt(input);
-
-    if (isNaN(tagCount) || tagCount < 1 || tagCount > 4) {
-      return interaction.reply({
-        content: '❌ Please enter a valid tag count between 1 and 4.',
-        ephemeral: true
-      });
-    }
-
-    setup.tagCount = tagCount;
+  if (interaction.isSelectMenu() && interaction.customId === 'select_scrim_days') {
+    const selectedDays = interaction.values;
+    setup.scrimDays = selectedDays;
     await setup.save();
 
-    return interaction.reply({
-      content: `✅ Tag count set to **${tagCount}**.`,
-      ephemeral: true
+    return interaction.update({
+      content: `✅ Scrim days set to: **${selectedDays.join(', ')}**`,
+      components: []
     });
   }
 };
