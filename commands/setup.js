@@ -6,27 +6,36 @@ module.exports = {
     .setDescription('Setup the scrim management panel'),
 
   async execute(interaction) {
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('create_scrim')
-        .setLabel('Create Scrim')
-        .setStyle(ButtonStyle.Success),
+    try {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('create_scrim')
+          .setLabel('Create Scrim')
+          .setStyle(ButtonStyle.Success),
+        
+        new ButtonBuilder()
+          .setCustomId('edit_scrim')
+          .setLabel('Edit Settings')
+          .setStyle(ButtonStyle.Primary),
 
-      new ButtonBuilder()
-        .setCustomId('edit_scrim')
-        .setLabel('Edit Settings')
-        .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('toggle_reg')
+          .setLabel('Start/Stop Registration')
+          .setStyle(ButtonStyle.Secondary)
+      );
 
-      new ButtonBuilder()
-        .setCustomId('toggle_reg')
-        .setLabel('Start/Stop Registration')
-        .setStyle(ButtonStyle.Secondary)
-    );
+      await interaction.reply({
+        content: '🛠️ **Scrim Control Panel**',
+        components: [row],
+        ephemeral: true
+      });
 
-    await interaction.reply({
-      content: '🛠️ **Scrim Control Panel**',
-      components: [row],
-      ephemeral: true
-    });
+    } catch (err) {
+      console.error('❌ Error in setup.js:', err);
+      await interaction.reply({
+        content: '❌ Error while executing the setup command.',
+        ephemeral: true
+      });
+    }
   }
 };
