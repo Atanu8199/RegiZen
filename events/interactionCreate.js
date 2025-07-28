@@ -1,76 +1,107 @@
-const { Events } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType
+} = require('discord.js');
 const ScrimSetup = require('../models/ScrimSetup');
 
-module.exports = {
-  name: Events.InteractionCreate,
-  async execute(interaction, client) {
-    // Slash Command handler
-    if (interaction.isChatInputCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command) return;
+module.exports = async (interaction, client) => {
+  if (interaction.isButton()) {
+    const { guildId, customId, channel } = interaction;
 
-      try {
-        await command.execute(interaction, client);
-      } catch (err) {
-        console.error(err);
-        await interaction.reply({ content: '❌ There was an error executing this command.', ephemeral: true });
-      }
+    let setup = await ScrimSetup.findOne({ guildId });
+    if (!setup) {
+      setup = new ScrimSetup({ guildId });
     }
 
-    // Button Handler
-    if (interaction.isButton()) {
-      const { customId, guildId } = interaction;
+    // 🟢 Main Panel: Setup Scrims
+    if (customId === 'setup_scrims') {
+      const embed = new EmbedBuilder()
+        .setTitle('📋 Create Scrim Configuration')
+        .setDescription(`Click the buttons below to configure your scrim.\n\nA️⃣ Registration Channel\nB️⃣ Mention Role\nC️⃣ Total Slots\nD️⃣ Tag Count Required\nE️⃣ Scrim Day(s)\nF️⃣ Open Time\nG️⃣ Success Role\nH️⃣ Reaction Emojis`)
+        .setFooter({ text: 'RegiZen • Scrim Setup' })
+        .setColor('#00b0f4');
 
-      // Load scrim setup data if needed
+      const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('conf_A').setLabel('A️⃣ Registration Channel').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_B').setLabel('B️⃣ Mention Role').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_C').setLabel('C️⃣ Total Slots').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_D').setLabel('D️⃣ Tag Count').setStyle(ButtonStyle.Primary)
+      );
+
+      const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('conf_E').setLabel('E️⃣ Scrim Day(s)').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_F').setLabel('F️⃣ Open Time').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_G').setLabel('G️⃣ Success Role').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('conf_H').setLabel('H️⃣ Reaction Emojis').setStyle(ButtonStyle.Primary)
+      );
+
+      return interaction.reply({
+        embeds: [embed],
+        components: [row1, row2],
+        ephemeral: true
+      });
+    }
+
+    // 🟢 A️⃣ Registration Channel
+    if (customId === 'conf_A') {
+      const channelOptions = interaction.guild.channels.cache
+        .filter(c => c.type === ChannelType.GuildText)
+        .map(c => ({
+          label: `#${c.name}`,
+          value: c.id
+        }))
+        .slice(0, 25);
+
+      return interaction.reply({
+        content: '📥 Select a registration channel:',
+        ephemeral: true,
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 3,
+                custom_id: 'select_reg_channel',
+                placeholder: 'Choose a channel...',
+                options: channelOptions
+              }
+            ]
+          }
+        ]
+      });
+    }
+
+    // 🟡 Placeholders for other buttons (B–H)
+    if (customId.startsWith('conf_')) {
+      return interaction.reply({
+        content: `🔧 This option is under construction.`,
+        ephemeral: true
+      });
+    }
+  }
+
+  // 🟣 Dropdown Select Handler
+  if (interaction.isSelectMenu()) {
+    const { customId, values, guildId } = interaction;
+
+    if (customId === 'select_reg_channel') {
+      const selectedChannelId = values[0];
+
       let setup = await ScrimSetup.findOne({ guildId });
-
-      // If not exists, create default setup
       if (!setup) {
         setup = new ScrimSetup({ guildId });
-        await setup.save();
       }
 
-      // ✅ Main Panel Buttons
-      switch (customId) {
-        case 'create_scrim':
-          require('../components/createScrimPanel')(interaction);
-          return;
+      setup.registrationChannel = selectedChannelId;
+      await setup.save();
 
-        case 'edit_settings':
-          return interaction.reply({ content: '🛠️ Edit Settings coming soon.', ephemeral: true });
-
-        case 'start_registration':
-          return interaction.reply({ content: '🟢 Registration started!', ephemeral: true });
-
-        case 'stop_registration':
-          return interaction.reply({ content: '🔴 Registration stopped.', ephemeral: true });
-
-        case 'view_slotlist':
-          return interaction.reply({ content: '📃 Slotlist view coming soon.', ephemeral: true });
-
-        case 'ban_user':
-          return interaction.reply({ content: '🚫 Ban system coming soon.', ephemeral: true });
-
-        case 'unban_user':
-          return interaction.reply({ content: '✅ Unban system coming soon.', ephemeral: true });
-
-        // ✅ Create Scrim A–H buttons (coming later)
-        case 'conf_A':
-        case 'conf_B':
-        case 'conf_C':
-        case 'conf_D':
-        case 'conf_E':
-        case 'conf_F':
-        case 'conf_G':
-        case 'conf_H':
-          return interaction.reply({ content: `🔧 Setup option ${customId.slice(-1)} coming soon.`, ephemeral: true });
-
-        case 'save_scrim':
-          return interaction.reply({ content: '💾 Scrim saved!', ephemeral: true });
-
-        case 'cancel_scrim':
-          return interaction.reply({ content: '❌ Scrim setup cancelled.', ephemeral: true });
-      }
+      return interaction.update({
+        content: `✅ Registration channel set to <#${selectedChannelId}>.`,
+        components: []
+      });
     }
   }
 };
