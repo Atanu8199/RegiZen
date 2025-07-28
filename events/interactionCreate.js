@@ -7,7 +7,7 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  RoleSelectMenuBuilder
+  PermissionsBitField
 } = require('discord.js');
 const ScrimSetup = require('../models/ScrimSetup');
 
@@ -15,15 +15,16 @@ module.exports = async (interaction, client) => {
   if (!interaction.isButton() && !interaction.isSelectMenu() && !interaction.isModalSubmit()) return;
 
   const { guildId, customId } = interaction;
-  console.log("Interaction:", customId);
-
   let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
 
-  // 📋 Main Configuration Panel
+  // Debug log
+  console.log("Interaction Triggered:", customId);
+
+  // 📌 Setup Scrim Main Panel
   if (customId === 'setup_scrims') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
-      .setDescription(`Click the buttons below to configure your scrim.\n\nA️⃣ Registration Channel\nB️⃣ Mention Role\nC️⃣ Total Slots\nD️⃣ Tag Count Required\nE️⃣ Scrim Day(s)\nF️⃣ Open Time\nG️⃣ Success Role\nH️⃣ Reaction Emojis`)
+      .setDescription(`Click the buttons below to configure your scrim:\n\nA️⃣ Registration Channel\nB️⃣ Mention Role\nC️⃣ Total Slots\nD️⃣ Tag Count\nE️⃣ Scrim Day(s)\nF️⃣ Open Time\nG️⃣ Success Role\nH️⃣ Reaction Emojis`)
       .setFooter({ text: 'RegiZen • Scrim Setup' })
       .setColor('#00b0f4');
 
@@ -44,11 +45,11 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       embeds: [embed],
       components: [row1, row2],
-      flags: 64 // ephemeral true
+      ephemeral: true // ⚠️ will show warning in console, safe to ignore
     });
   }
 
-  // A️⃣ Registration Channel
+  // ✅ A: Select Registration Channel
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
@@ -57,24 +58,19 @@ module.exports = async (interaction, client) => {
 
     return interaction.reply({
       content: '📥 Select a registration channel:',
-      flags: 64,
+      ephemeral: true,
       components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_reg_channel',
-              placeholder: 'Choose a channel...',
-              options
-            }
-          ]
-        }
+        new ActionRowBuilder().addComponents({
+          type: 3,
+          custom_id: 'select_reg_channel',
+          placeholder: 'Choose a channel...',
+          options
+        })
       ]
     });
   }
 
-  if (interaction.isSelectMenu() && customId === 'select_reg_channel') {
+  if (customId === 'select_reg_channel' && interaction.isSelectMenu()) {
     const selectedChannelId = interaction.values[0];
     setup.registrationChannel = selectedChannelId;
     await setup.save();
@@ -85,24 +81,31 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // B️⃣ Mention Role
+  // ✅ B: Mention Role Select
   if (customId === 'conf_B') {
-    const row = new ActionRowBuilder().addComponents(
-      new RoleSelectMenuBuilder()
-        .setCustomId('select_mention_role')
-        .setPlaceholder('Select a role to mention')
-        .setMinValues(1)
-        .setMaxValues(1)
-    );
+    const options = interaction.guild.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .map(role => ({
+        label: role.name,
+        value: role.id
+      }))
+      .slice(0, 25);
 
     return interaction.reply({
-      content: '📢 Select a role to mention:',
-      components: [row],
-      flags: 64
+      content: '🔔 Select a mention role:',
+      ephemeral: true,
+      components: [
+        new ActionRowBuilder().addComponents({
+          type: 3,
+          custom_id: 'select_mention_role',
+          placeholder: 'Choose a role...',
+          options
+        })
+      ]
     });
   }
 
-  if (interaction.isSelectMenu() && customId === 'select_mention_role') {
+  if (customId === 'select_mention_role' && interaction.isSelectMenu()) {
     const roleId = interaction.values[0];
     setup.mentionRole = roleId;
     await setup.save();
@@ -113,31 +116,33 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // C️⃣ Total Slots
+  // ✅ C: Total Slots
   if (customId === 'conf_C') {
     const modal = new ModalBuilder()
-      .setCustomId('modal_total_slots')
-      .setTitle('Set Total Slots');
+      .setCustomId('set_total_slots')
+      .setTitle('C️⃣ Set Total Slots');
 
-    const input = new TextInputBuilder()
+    const slotInput = new TextInputBuilder()
       .setCustomId('total_slots_input')
-      .setLabel('Enter total number of slots (Max 25)')
+      .setLabel('Enter total number of slots (1–25)')
       .setStyle(TextInputStyle.Short)
-      .setRequired(true);
+      .setRequired(true)
+      .setMaxLength(2);
 
-    const row = new ActionRowBuilder().addComponents(input);
+    const row = new ActionRowBuilder().addComponents(slotInput);
     modal.addComponents(row);
 
     return interaction.showModal(modal);
   }
 
-  if (interaction.isModalSubmit() && customId === 'modal_total_slots') {
-    const slots = parseInt(interaction.fields.getTextInputValue('total_slots_input'));
+  if (interaction.isModalSubmit() && customId === 'set_total_slots') {
+    const input = interaction.fields.getTextInputValue('total_slots_input');
+    const slots = parseInt(input);
 
     if (isNaN(slots) || slots < 1 || slots > 25) {
       return interaction.reply({
-        content: '❌ Invalid slot number. Please enter a number between 1 and 25.',
-        flags: 64
+        content: '❌ Please enter a valid number between 1 and 25.',
+        ephemeral: true
       });
     }
 
@@ -146,7 +151,7 @@ module.exports = async (interaction, client) => {
 
     return interaction.reply({
       content: `✅ Total slots set to **${slots}**.`,
-      flags: 64
+      ephemeral: true
     });
   }
 };
