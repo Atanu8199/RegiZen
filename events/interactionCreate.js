@@ -23,6 +23,77 @@ module.exports = async (interaction, client) => {
     });
   }
 
+  // 🔘 Panel Buttons (Create, Edit, etc.)
+  if (customId === 'create_scrim') {
+    await interaction.reply({
+      content: '🟢 Create Scrim button clicked! (Setup form will appear here)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'edit_scrim') {
+    await interaction.reply({
+      content: '🟣 Edit Settings clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'toggle_reg') {
+    await interaction.reply({
+      content: '✅ Start/Stop Registration clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'manage_slotlist') {
+    await interaction.reply({
+      content: '📂 Manage Slotlist clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'reserve_slots') {
+    await interaction.reply({
+      content: '📌 Reserve Slots clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'ban_unban') {
+    await interaction.reply({
+      content: '🚫 Ban/Unban clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'enable_disable_scrim') {
+    await interaction.reply({
+      content: '🔄 Enable/Disable clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'design_scrim') {
+    await interaction.reply({
+      content: '🎨 Design clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'drop_location') {
+    await interaction.reply({
+      content: '🗺️ Drop Location clicked! (Feature coming soon)',
+      ephemeral: true
+    });
+  }
+
+  if (customId === 'scrim_help') {
+    await interaction.reply({
+      content: '❓ Help clicked! You can set up scrims using the buttons A to H.',
+      ephemeral: true
+    });
+  }
+
   // 🅰 A Button – Set Registration Channel
   if (customId === 'set_reg_channel') {
     await interaction.reply({ content: '📢 Mention the channel where you want to take registrations.', ephemeral: true });
