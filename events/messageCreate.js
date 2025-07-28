@@ -2,30 +2,20 @@ module.exports = {
   name: 'messageCreate',
 
   async execute(message, client) {
-    // Ignore bot messages
     if (message.author.bot) return;
+    if (!message.content.startsWith('!')) return;
 
-    // Your prefix
-    const prefix = '!';
-
-    // Check if message starts with prefix
-    if (!message.content.startsWith(prefix)) return;
-
-    // Split command and args
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const args = message.content.slice(1).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    // Check for RZSETUP
-    if (commandName === 'rzsetup') {
-      const command = client.commands.get('setup'); // 🟢 'setup.js' file
-      if (command) {
-        try {
-          await command.execute(message, args, client);
-        } catch (error) {
-          console.error('❌ Error executing rzsetup:', error);
-          await message.reply('❌ Something went wrong while running the command.');
-        }
-      }
+    const command = client.commands.get(commandName);
+    if (!command) return;
+
+    try {
+      await command.execute(message, args, client);
+    } catch (error) {
+      console.error(error);
+      message.reply('❌ There was an error executing that command.');
     }
   }
 };
