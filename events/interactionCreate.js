@@ -11,12 +11,11 @@ module.exports = async (interaction, client) => {
   if (!interaction.isButton() && !interaction.isSelectMenu() && !interaction.isModalSubmit()) return;
 
   const { guildId, customId } = interaction;
-
   console.log("Interaction:", customId);
 
   let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
 
-  // Show Scrim Setup Panel
+  // 🛠️ Show Setup Panel
   if (customId === 'setup_scrims') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
@@ -45,7 +44,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // === A to H Buttons ===
+  // === A to H Configs ===
 
   // A️⃣ Registration Channel
   if (customId === 'conf_A') {
@@ -69,7 +68,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'select_reg_channel') {
+  if (customId === 'select_reg_channel') {
     const selectedChannelId = interaction.values[0];
     setup.registrationChannel = selectedChannelId;
     await setup.save();
@@ -102,7 +101,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'select_mention_role') {
+  if (customId === 'select_mention_role') {
     const roleId = interaction.values[0];
     setup.mentionRole = roleId;
     await setup.save();
@@ -132,7 +131,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'modal_total_slots') {
+  if (customId === 'modal_total_slots') {
     const total = parseInt(interaction.fields.getTextInputValue('total_slots_input'));
     if (isNaN(total) || total < 1 || total > 25) {
       return interaction.reply({ content: '❌ Enter a valid number (1–25).', ephemeral: true });
@@ -144,7 +143,7 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ content: `✅ Total slots set to: **${total}**`, ephemeral: true });
   }
 
-  // D️⃣ Tag Count
+  // D️⃣ Tag Count Required
   if (customId === 'conf_D') {
     return interaction.showModal({
       custom_id: 'modal_tag_count',
@@ -163,7 +162,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'modal_tag_count') {
+  if (customId === 'modal_tag_count') {
     const count = parseInt(interaction.fields.getTextInputValue('tag_count_input'));
     if (isNaN(count) || count < 1 || count > 4) {
       return interaction.reply({ content: '❌ Enter a valid number between 1–4.', ephemeral: true });
@@ -202,15 +201,18 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'select_scrim_days') {
+  if (customId === 'select_scrim_days') {
     const days = interaction.values;
     setup.scrimDays = days;
     await setup.save();
 
-    return interaction.update({ content: `✅ Scrim days set to: **${days.join(', ')}**`, components: [] });
+    return interaction.update({
+      content: `✅ Scrim days set to: **${days.join(', ')}**`,
+      components: []
+    });
   }
 
-  // F️⃣ Open Time
+  // ✅ F️⃣ Open Time (NEW)
   if (customId === 'conf_F') {
     return interaction.showModal({
       custom_id: 'modal_open_time',
@@ -229,12 +231,15 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'modal_open_time') {
+  if (customId === 'modal_open_time') {
     const time = interaction.fields.getTextInputValue('open_time_input');
     setup.openTime = time;
     await setup.save();
 
-    return interaction.reply({ content: `✅ Open time set to: **${time}**`, ephemeral: true });
+    return interaction.reply({
+      content: `✅ Open time set to: **${time}**`,
+      ephemeral: true
+    });
   }
 
   // G️⃣ Success Role
@@ -245,7 +250,7 @@ module.exports = async (interaction, client) => {
       .slice(0, 25);
 
     return interaction.reply({
-      content: '✅ Select Success Role (given after registration):',
+      content: '🎯 Select Success Role (after registration):',
       ephemeral: true,
       components: [{
         type: 1,
@@ -259,12 +264,15 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'select_success_role') {
+  if (customId === 'select_success_role') {
     const roleId = interaction.values[0];
     setup.successRole = roleId;
     await setup.save();
 
-    return interaction.update({ content: `✅ Success role set to: <@&${roleId}>`, components: [] });
+    return interaction.update({
+      content: `✅ Success role set to: <@&${roleId}>`,
+      components: []
+    });
   }
 
   // H️⃣ Reaction Emojis
@@ -286,11 +294,14 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  if (interaction.customId === 'modal_react_emojis') {
+  if (customId === 'modal_react_emojis') {
     const emojis = interaction.fields.getTextInputValue('emoji_input') || '';
     setup.reactionEmojis = emojis.split(',').map(e => e.trim()).filter(Boolean);
     await setup.save();
 
-    return interaction.reply({ content: `✅ Reaction emojis set to: ${setup.reactionEmojis.join(' ') || '✅ (default)'}`, ephemeral: true });
+    return interaction.reply({
+      content: `✅ Reaction emojis set to: ${setup.reactionEmojis.join(' ') || '✅ (default)'}`,
+      ephemeral: true
+    });
   }
 };
