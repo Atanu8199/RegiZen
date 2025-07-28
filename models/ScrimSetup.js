@@ -1,47 +1,40 @@
-// models/ScrimSetup.js
-
 const mongoose = require('mongoose');
 
-const ScrimSetupSchema = new mongoose.Schema({
+const scrimSetupSchema = new mongoose.Schema({
   guildId: {
     type: String,
     required: true,
-    unique: true,
+    unique: true
   },
   registrationChannel: {
     type: String,
-    default: null,
+    default: null // Channel ID
   },
   mentionRole: {
     type: String,
-    default: null,
+    default: null // Role ID
   },
   totalSlots: {
     type: Number,
-    default: 25,
+    default: 25
   },
   tagCount: {
     type: Number,
-    default: 2,
+    default: 4
   },
   scrimDays: {
     type: [String],
-    default: [],
+    default: [] // ['Monday', 'Tuesday', ...]
   },
   openTime: {
     type: String,
-    default: null,
+    default: null // e.g., "1:00 PM"
   },
   successRole: {
     type: String,
-    default: null,
+    default: null // Role ID
   },
-  reactionEmojis: {
-    type: [String],
-    default: [],
-  },
-}, {
-  timestamps: true
-});
+  // Step H (to be added): emojis or other future settings can be added here
+}, { timestamps: true });
 
-module.exports = mongoose.model('ScrimSetup', ScrimSetupSchema);
+module.exports = mongoose.model('ScrimSetup', scrimSetupSchema);
