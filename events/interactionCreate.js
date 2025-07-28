@@ -3,7 +3,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ChannelType
+  ChannelType,
 } = require('discord.js');
 const ScrimSetup = require('../models/ScrimSetup');
 
@@ -11,9 +11,8 @@ module.exports = async (interaction, client) => {
   if (!interaction.isButton()) return;
 
   const { guildId, customId, channel, user } = interaction;
-  let setup = await ScrimSetup.findOne({ guildId });
 
-  // Create default setup if none exists
+  let setup = await ScrimSetup.findOne({ guildId });
   if (!setup) {
     setup = await ScrimSetup.create({
       guildId,
@@ -25,164 +24,208 @@ module.exports = async (interaction, client) => {
       openTime: null,
       scrimDays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
       reactions: ['✅', '❌'],
-      messageId: null
+      messageId: null,
     });
   }
 
-  // Control Panel Buttons
+  // 🟢 Create Scrim
   if (customId === 'create_scrim') {
     await updateScrimEmbed(channel, setup);
-    await interaction.reply({ content: '✅ Scrim creation panel sent.', ephemeral: true });
+    await interaction.reply({ content: '🛠️ Scrim setup panel sent.', ephemeral: true });
   }
 
+  // 🟣 Edit Settings
   if (customId === 'edit_scrim') {
-    await interaction.reply({ content: '🟣 Edit Settings (coming soon)', ephemeral: true });
+    await interaction.reply({ content: '🟣 Edit Settings clicked! (Coming soon)', ephemeral: true });
   }
 
+  // ✅ Toggle Registration
   if (customId === 'toggle_reg') {
-    await interaction.reply({ content: '🟠 Start/Stop Registration (coming soon)', ephemeral: true });
+    await interaction.reply({ content: '⏯️ Start/Stop Registration clicked! (Coming soon)', ephemeral: true });
   }
 
-  // Configuration Buttons (A–H)
+  // 🅰 Set Registration Channel
   if (customId === 'set_reg_channel') {
-    await interaction.reply({ content: '📢 Mention the channel for registration.', ephemeral: true });
+    await interaction.reply({ content: '📢 Mention the registration channel (e.g. #register-here)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
+    if (!collected || collected.size === 0) return;
+
     const msg = collected.first();
-    const mention = msg.mentions.channels.first();
-    if (!mention || mention.type !== ChannelType.GuildText) {
-      await msg.reply('❌ Invalid channel.');
+    const mentioned = msg.mentions.channels.first();
+
+    if (!mentioned || mentioned.type !== ChannelType.GuildText) {
+      await msg.reply('❌ Please mention a valid text channel.');
       return;
     }
-    setup.regChannel = mention.id;
+
+    setup.regChannel = mentioned.id;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🅱 Set Slotlist Channel
   if (customId === 'set_slot_channel') {
     await interaction.reply({ content: '📂 Mention the slotlist channel.', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
+    if (!collected || collected.size === 0) return;
+
     const msg = collected.first();
-    const mention = msg.mentions.channels.first();
-    if (!mention || mention.type !== ChannelType.GuildText) {
-      await msg.reply('❌ Invalid channel.');
+    const mentioned = msg.mentions.channels.first();
+
+    if (!mentioned || mentioned.type !== ChannelType.GuildText) {
+      await msg.reply('❌ Please mention a valid text channel.');
       return;
     }
-    setup.slotlistChannel = mention.id;
+
+    setup.slotlistChannel = mentioned.id;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇨 Set Success Role
   if (customId === 'set_success_role') {
-    await interaction.reply({ content: '✅ Mention the role given after successful registration.', ephemeral: true });
+    await interaction.reply({ content: '🎖️ Mention the success role (e.g. @Registered)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
+    if (!collected || collected.size === 0) return;
+
     const msg = collected.first();
     const role = msg.mentions.roles.first();
+
     if (!role) {
       await msg.reply('❌ Please mention a valid role.');
       return;
     }
+
     setup.successRole = role.id;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇩 Set Required Mentions
   if (customId === 'set_mentions') {
-    await interaction.reply({ content: '🔢 Enter number of required mentions (1-4)', ephemeral: true });
+    await interaction.reply({ content: '🔢 Enter required mentions (1–4)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
-    const num = parseInt(collected.first().content);
-    if (isNaN(num) || num < 1 || num > 4) {
-      await collected.first().reply('❌ Invalid number.');
+    if (!collected || collected.size === 0) return;
+
+    const msg = collected.first();
+    const value = parseInt(msg.content);
+
+    if (isNaN(value) || value < 1 || value > 4) {
+      await msg.reply('❌ Enter a valid number between 1 and 4.');
       return;
     }
-    setup.mentionsRequired = num;
+
+    setup.mentionsRequired = value;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇪 Set Total Slots
   if (customId === 'set_total_slots') {
-    await interaction.reply({ content: '🔢 Enter total number of scrim slots (e.g., 25)', ephemeral: true });
+    await interaction.reply({ content: '🎯 Enter total number of slots (e.g. 25)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
-    const num = parseInt(collected.first().content);
-    if (isNaN(num) || num < 1 || num > 100) {
-      await collected.first().reply('❌ Invalid number.');
+    if (!collected || collected.size === 0) return;
+
+    const msg = collected.first();
+    const value = parseInt(msg.content);
+
+    if (isNaN(value) || value < 1 || value > 100) {
+      await msg.reply('❌ Enter a valid number between 1 and 100.');
       return;
     }
-    setup.totalSlots = num;
+
+    setup.totalSlots = value;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇫 Set Open Time
   if (customId === 'set_open_time') {
-    await interaction.reply({ content: '⏰ Enter open time (e.g., `2:00 PM`)', ephemeral: true });
+    await interaction.reply({ content: '⏰ Enter registration open time (e.g. 12:00 PM)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
-    setup.openTime = collected.first().content;
+    if (!collected || collected.size === 0) return;
+
+    const msg = collected.first();
+    setup.openTime = msg.content;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇬 Set Scrim Days
   if (customId === 'set_scrim_days') {
-    await interaction.reply({
-      content: '📆 Enter days (comma-separated like: Mo,Tu,We)',
-      ephemeral: true
-    });
+    await interaction.reply({ content: '📆 Enter scrim days (e.g. Mo,Tu,We)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
-    const input = collected.first().content.split(',').map(d => d.trim());
-    setup.scrimDays = input;
+    if (!collected || collected.size === 0) return;
+
+    const msg = collected.first();
+    const days = msg.content.split(',').map(d => d.trim().slice(0, 2));
+    setup.scrimDays = days;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
+  // 🇭 Set Reactions
   if (customId === 'set_reactions') {
-    await interaction.reply({ content: '😀 Enter 2 emojis for react join (e.g., ✅,❌)', ephemeral: true });
+    await interaction.reply({ content: '😄 Enter 2 emojis separated by comma (e.g. ✅,❌)', ephemeral: true });
+
     const filter = m => m.author.id === user.id;
     const collected = await channel.awaitMessages({ filter, max: 1, time: 30000 }).catch(() => null);
-    if (!collected?.size) return;
-    const [yes, no] = collected.first().content.split(',').map(e => e.trim());
-    setup.reactions = [yes, no];
+    if (!collected || collected.size === 0) return;
+
+    const msg = collected.first();
+    const emojis = msg.content.split(',').map(e => e.trim());
+
+    if (emojis.length !== 2) {
+      await msg.reply('❌ Please provide exactly 2 emojis separated by comma.');
+      return;
+    }
+
+    setup.reactions = emojis;
     await setup.save();
     await updateScrimEmbed(channel, setup);
   }
 
-  // Save / Cancel
-  if (customId === 'save_scrim') {
-    await interaction.reply({ content: '✅ Scrim setup saved!', ephemeral: true });
-  }
-
+  // ❌ Cancel Button
   if (customId === 'cancel_scrim') {
     await interaction.update({ content: '❌ Scrim creation cancelled.', embeds: [], components: [] });
   }
+
+  // ✅ Save Scrim
+  if (customId === 'save_scrim') {
+    await interaction.reply({ content: '✅ Scrim settings saved.', ephemeral: true });
+  }
 };
 
-// Embed Update Helper
+// 🔧 Embed Update Function
 async function updateScrimEmbed(channel, setup) {
   const embed = new EmbedBuilder()
-    .setTitle('Scrim Setup Panel')
-    .setDescription('Use the buttons below to set each scrim setting')
+    .setTitle('📋 Scrim Configuration')
+    .setDescription('Click the buttons A–H to configure your scrim.\nPress **Save** when done or **Cancel** to discard.')
     .addFields(
-      { name: '🅰 Reg. Channel:', value: setup.regChannel ? `<#${setup.regChannel}>` : 'Not–Set', inline: true },
-      { name: '🅱 Slotlist Channel:', value: setup.slotlistChannel ? `<#${setup.slotlistChannel}>` : 'Not–Set', inline: true },
-      { name: '🇨 Success Role:', value: setup.successRole ? `<@&${setup.successRole}>` : 'Not–Set', inline: true },
-      { name: '🇩 Mentions:', value: `${setup.mentionsRequired}`, inline: true },
-      { name: '🇪 Total Slots:', value: setup.totalSlots ? `${setup.totalSlots}` : 'Not–Set', inline: true },
-      { name: '🇫 Open Time:', value: setup.openTime || 'Not–Set', inline: true },
-      { name: '🇬 Scrim Days:', value: setup.scrimDays.length ? setup.scrimDays.join(', ') : 'Mo,Tu,We,Th,Fr,Sa,Su', inline: true },
+      { name: '🅰 Reg. Channel:', value: setup.regChannel ? `<#${setup.regChannel}>` : 'Not Set', inline: true },
+      { name: '🅱 Slotlist Channel:', value: setup.slotlistChannel ? `<#${setup.slotlistChannel}>` : 'Not Set', inline: true },
+      { name: '🇨 Success Role:', value: setup.successRole ? `<@&${setup.successRole}>` : 'Not Set', inline: true },
+      { name: '🇩 Required Mentions:', value: `${setup.mentionsRequired}`, inline: true },
+      { name: '🇪 Total Slots:', value: setup.totalSlots ? `${setup.totalSlots}` : 'Not Set', inline: true },
+      { name: '🇫 Open Time:', value: setup.openTime || 'Not Set', inline: true },
+      { name: '🇬 Scrim Days:', value: setup.scrimDays.length ? setup.scrimDays.join(', ') : 'Not Set', inline: true },
       { name: '🇭 Reactions:', value: setup.reactions.join(', '), inline: true }
     )
-    .setColor('Blue');
+    .setColor('Blurple');
 
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('set_reg_channel').setLabel('A').setStyle(ButtonStyle.Primary),
@@ -200,18 +243,19 @@ async function updateScrimEmbed(channel, setup) {
     new ButtonBuilder().setCustomId('save_scrim').setLabel('Save Scrim').setStyle(ButtonStyle.Success)
   );
 
-  try {
-    if (setup.messageId) {
-      const oldMsg = await channel.messages.fetch(setup.messageId).catch(() => null);
-      if (oldMsg) {
-        await oldMsg.edit({ embeds: [embed], components: [row1, row2] });
-        return;
-      }
+  if (setup.messageId) {
+    try {
+      const msg = await channel.messages.fetch(setup.messageId);
+      await msg.edit({ embeds: [embed], components: [row1, row2] });
+    } catch (err) {
+      console.error('🔁 Could not edit old embed:', err.message);
+      const msg = await channel.send({ embeds: [embed], components: [row1, row2] });
+      setup.messageId = msg.id;
+      await setup.save();
     }
+  } else {
     const msg = await channel.send({ embeds: [embed], components: [row1, row2] });
     setup.messageId = msg.id;
     await setup.save();
-  } catch (err) {
-    console.error('❌ Failed to update embed:', err.message);
   }
 }
