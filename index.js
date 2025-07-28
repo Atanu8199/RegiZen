@@ -27,6 +27,23 @@ for (const file of eventFiles) {
   client.on(event.name, (...args) => event.execute(...args, client));
 }
 
+// 🔧 Handle !RZSETUP message command
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
+  if (message.content.startsWith('!RZSETUP')) {
+    const command = client.commands.get('setup');
+    if (command) {
+      try {
+        await command.execute(message, [], client);
+      } catch (err) {
+        console.error('Error executing !RZSETUP:', err);
+        message.reply('❌ Error while executing the setup command.');
+      }
+    }
+  }
+});
+
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
