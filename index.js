@@ -1,70 +1,43 @@
-// commands/setup.js
+require('dotenv').config();
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const mongoose = require('mongoose');
+const fs = require('fs');
 
-const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
-} = require('discord.js');
+// Create Discord client with required intents
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent
+  ]
+});
 
-module.exports = {
-  name: 'setup',
-  description: 'Setup Scrims Panel',
-  async execute(message, args, client) {
-    const embed = new EmbedBuilder()
-      .setTitle('🎯 Scrim Admin Panel')
-      .setDescription('Use the buttons below to create or manage your scrims.\n\nClick **Create Scrim** to begin setting up a new one.')
-      .setColor('Green');
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('✅ MongoDB connected');
+}).catch((err) => {
+  console.error('❌ MongoDB connection failed:', err);
+  process.exit(1); // stop if MongoDB fails
+});
 
-    const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('create_scrim')
-        .setLabel('🟢 Create Scrim')
-        .setStyle(ButtonStyle.Success),
+// Load commands
+client.commands = new Collection();
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.name, command);
+}
 
-      new ButtonBuilder()
-        .setCustomId('edit_scrim')
-        .setLabel('⚙️ Edit Settings')
-        .setStyle(ButtonStyle.Primary),
+// Load events
+const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
+for (const file of eventFiles) {
+  const event = require(`./events/${file}`);
+  client.on(event.name, (...args) => event.execute(...args, client));
+}
 
-      new ButtonBuilder()
-        .setCustomId('toggle_reg')
-        .setLabel('🔄 Start/Stop Registration')
-        .setStyle(ButtonStyle.Secondary)
-    );
-
-    const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('manage_slotlist')
-        .setLabel('📂 Manage Slotlist')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId('ban_unban')
-        .setLabel('🚫 Ban/Unban')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId('drop_location')
-        .setLabel('🗺️ Drop Location')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId('design_scrim')
-        .setLabel('🎨 Design')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId('scrim_help')
-        .setLabel('❓ Help')
-        .setStyle(ButtonStyle.Link)
-        .setURL('https://yourbot.help') // Replace with your help/docs URL
-    );
-
-    await message.channel.send({
-      content: `👋 <@${message.author.id}> opened the Scrim Admin Panel.`,
-      embeds: [embed],
-      components: [row1, row2]
-    });
-  }
-};
+// Login bot
+client.login(process.env.TOKEN);
