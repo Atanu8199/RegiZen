@@ -41,11 +41,13 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       embeds: [embed],
       components: [row1, row2],
-      flags: 1 << 6 // ephemeral
+      flags: 1 << 6
     });
   }
 
-  // A️⃣ Select Registration Channel
+  // === A to H Buttons ===
+
+  // A️⃣ Registration Channel
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
@@ -55,23 +57,19 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       content: '📥 Select a registration channel:',
       flags: 1 << 6,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_reg_channel',
-              placeholder: 'Choose a channel...',
-              options
-            }
-          ]
-        }
-      ]
+      components: [{
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'select_reg_channel',
+          placeholder: 'Choose a channel...',
+          options
+        }]
+      }]
     });
   }
 
-  if (interaction.isSelectMenu() && interaction.customId === 'select_reg_channel') {
+  if (interaction.customId === 'select_reg_channel') {
     const selectedChannelId = interaction.values[0];
     setup.registrationChannel = selectedChannelId;
     await setup.save();
@@ -82,7 +80,7 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // B️⃣ Select Mention Role
+  // B️⃣ Mention Role
   if (customId === 'conf_B') {
     const options = interaction.guild.roles.cache
       .filter(r => r.name !== '@everyone')
@@ -90,25 +88,21 @@ module.exports = async (interaction, client) => {
       .slice(0, 25);
 
     return interaction.reply({
-      content: '🔔 Select a role to mention when scrim opens:',
+      content: '🔔 Select a role to mention:',
       flags: 1 << 6,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_mention_role',
-              placeholder: 'Choose a role...',
-              options
-            }
-          ]
-        }
-      ]
+      components: [{
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'select_mention_role',
+          placeholder: 'Choose a role...',
+          options
+        }]
+      }]
     });
   }
 
-  if (interaction.isSelectMenu() && interaction.customId === 'select_mention_role') {
+  if (interaction.customId === 'select_mention_role') {
     const roleId = interaction.values[0];
     setup.mentionRole = roleId;
     await setup.save();
@@ -119,88 +113,184 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // C️⃣ Total Slots Input
+  // C️⃣ Total Slots
   if (customId === 'conf_C') {
     return interaction.showModal({
       custom_id: 'modal_total_slots',
-      title: 'Enter Total Slots (Max 25)',
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 4,
-              custom_id: 'total_slots_input',
-              style: 1,
-              label: 'Total Team Slots',
-              placeholder: 'e.g. 16, 20, 25',
-              required: true
-            }
-          ]
-        }
-      ]
+      title: 'Enter Total Slots',
+      components: [{
+        type: 1,
+        components: [{
+          type: 4,
+          custom_id: 'total_slots_input',
+          style: 1,
+          label: 'Total Team Slots',
+          placeholder: 'e.g. 16, 20, 25',
+          required: true
+        }]
+      }]
     });
   }
 
-  if (interaction.isModalSubmit() && interaction.customId === 'modal_total_slots') {
-    const value = interaction.fields.getTextInputValue('total_slots_input');
-    const total = parseInt(value);
-
+  if (interaction.customId === 'modal_total_slots') {
+    const total = parseInt(interaction.fields.getTextInputValue('total_slots_input'));
     if (isNaN(total) || total < 1 || total > 25) {
-      return interaction.reply({
-        content: '❌ Please enter a valid number between 1 and 25.',
-        ephemeral: true
-      });
+      return interaction.reply({ content: '❌ Enter a valid number (1–25).', ephemeral: true });
     }
 
     setup.totalSlots = total;
     await setup.save();
 
-    return interaction.reply({
-      content: `✅ Total slots set to: **${total}**`,
-      ephemeral: true
+    return interaction.reply({ content: `✅ Total slots set to: **${total}**`, ephemeral: true });
+  }
+
+  // D️⃣ Tag Count
+  if (customId === 'conf_D') {
+    return interaction.showModal({
+      custom_id: 'modal_tag_count',
+      title: 'Enter Required Tag Count',
+      components: [{
+        type: 1,
+        components: [{
+          type: 4,
+          custom_id: 'tag_count_input',
+          style: 1,
+          label: 'Team Members Tag Count (1–4)',
+          placeholder: 'e.g. 2',
+          required: true
+        }]
+      }]
     });
+  }
+
+  if (interaction.customId === 'modal_tag_count') {
+    const count = parseInt(interaction.fields.getTextInputValue('tag_count_input'));
+    if (isNaN(count) || count < 1 || count > 4) {
+      return interaction.reply({ content: '❌ Enter a valid number between 1–4.', ephemeral: true });
+    }
+
+    setup.tagCount = count;
+    await setup.save();
+
+    return interaction.reply({ content: `✅ Required tag count: **${count}**`, ephemeral: true });
   }
 
   // E️⃣ Scrim Day(s)
   if (customId === 'conf_E') {
     return interaction.reply({
-      content: '📅 Select the days for scrims:',
+      content: '📅 Select Scrim Days:',
       ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_scrim_days',
-              placeholder: 'Choose scrim days...',
-              min_values: 1,
-              max_values: 7,
-              options: [
-                { label: 'Monday', value: 'Monday' },
-                { label: 'Tuesday', value: 'Tuesday' },
-                { label: 'Wednesday', value: 'Wednesday' },
-                { label: 'Thursday', value: 'Thursday' },
-                { label: 'Friday', value: 'Friday' },
-                { label: 'Saturday', value: 'Saturday' },
-                { label: 'Sunday', value: 'Sunday' }
-              ]
-            }
+      components: [{
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'select_scrim_days',
+          placeholder: 'Choose scrim days...',
+          min_values: 1,
+          max_values: 7,
+          options: [
+            { label: 'Monday', value: 'Monday' },
+            { label: 'Tuesday', value: 'Tuesday' },
+            { label: 'Wednesday', value: 'Wednesday' },
+            { label: 'Thursday', value: 'Thursday' },
+            { label: 'Friday', value: 'Friday' },
+            { label: 'Saturday', value: 'Saturday' },
+            { label: 'Sunday', value: 'Sunday' }
           ]
-        }
-      ]
+        }]
+      }]
     });
   }
 
-  if (interaction.isSelectMenu() && interaction.customId === 'select_scrim_days') {
-    const selectedDays = interaction.values;
-    setup.scrimDays = selectedDays;
+  if (interaction.customId === 'select_scrim_days') {
+    const days = interaction.values;
+    setup.scrimDays = days;
     await setup.save();
 
-    return interaction.update({
-      content: `✅ Scrim days set to: **${selectedDays.join(', ')}**`,
-      components: []
+    return interaction.update({ content: `✅ Scrim days set to: **${days.join(', ')}**`, components: [] });
+  }
+
+  // F️⃣ Open Time
+  if (customId === 'conf_F') {
+    return interaction.showModal({
+      custom_id: 'modal_open_time',
+      title: 'Enter Registration Open Time',
+      components: [{
+        type: 1,
+        components: [{
+          type: 4,
+          custom_id: 'open_time_input',
+          style: 1,
+          label: 'Open Time (e.g. 1:00 PM)',
+          placeholder: 'e.g. 2:30 PM',
+          required: true
+        }]
+      }]
     });
+  }
+
+  if (interaction.customId === 'modal_open_time') {
+    const time = interaction.fields.getTextInputValue('open_time_input');
+    setup.openTime = time;
+    await setup.save();
+
+    return interaction.reply({ content: `✅ Open time set to: **${time}**`, ephemeral: true });
+  }
+
+  // G️⃣ Success Role
+  if (customId === 'conf_G') {
+    const options = interaction.guild.roles.cache
+      .filter(r => r.name !== '@everyone')
+      .map(r => ({ label: r.name, value: r.id }))
+      .slice(0, 25);
+
+    return interaction.reply({
+      content: '✅ Select Success Role (given after registration):',
+      ephemeral: true,
+      components: [{
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'select_success_role',
+          placeholder: 'Choose a role...',
+          options
+        }]
+      }]
+    });
+  }
+
+  if (interaction.customId === 'select_success_role') {
+    const roleId = interaction.values[0];
+    setup.successRole = roleId;
+    await setup.save();
+
+    return interaction.update({ content: `✅ Success role set to: <@&${roleId}>`, components: [] });
+  }
+
+  // H️⃣ Reaction Emojis
+  if (customId === 'conf_H') {
+    return interaction.showModal({
+      custom_id: 'modal_react_emojis',
+      title: 'Custom Reaction Emojis',
+      components: [{
+        type: 1,
+        components: [{
+          type: 4,
+          custom_id: 'emoji_input',
+          style: 1,
+          label: 'Emojis (e.g. ✅,🔥)',
+          placeholder: 'Leave blank for default',
+          required: false
+        }]
+      }]
+    });
+  }
+
+  if (interaction.customId === 'modal_react_emojis') {
+    const emojis = interaction.fields.getTextInputValue('emoji_input') || '';
+    setup.reactionEmojis = emojis.split(',').map(e => e.trim()).filter(Boolean);
+    await setup.save();
+
+    return interaction.reply({ content: `✅ Reaction emojis set to: ${setup.reactionEmojis.join(' ') || '✅ (default)'}`, ephemeral: true });
   }
 };
