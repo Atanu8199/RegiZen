@@ -8,11 +8,11 @@ const scrimSetupSchema = new mongoose.Schema({
   },
   registrationChannel: {
     type: String,
-    default: null // Channel ID
+    default: null
   },
   mentionRole: {
     type: String,
-    default: null // Role ID
+    default: null
   },
   totalSlots: {
     type: Number,
@@ -24,17 +24,20 @@ const scrimSetupSchema = new mongoose.Schema({
   },
   scrimDays: {
     type: [String],
-    default: [] // ['Monday', 'Tuesday', ...]
+    default: []
   },
   openTime: {
     type: String,
-    default: null // e.g., "1:00 PM"
+    default: null
   },
   successRole: {
     type: String,
-    default: null // Role ID
+    default: null
   },
-  // Step H (to be added): emojis or other future settings can be added here
+  reactionEmojis: {
+    type: [String],
+    default: []
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('ScrimSetup', scrimSetupSchema);
