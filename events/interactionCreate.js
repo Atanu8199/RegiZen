@@ -13,10 +13,14 @@ module.exports = async (interaction, client) => {
   const { guildId, customId } = interaction;
 
   // Debug
-  console.log("Interaction:", customId);
+  console.log("Interaction received:", customId);
 
-  let setup = await ScrimSetup.findOne({ guildId }) || new ScrimSetup({ guildId });
+  let setup = await ScrimSetup.findOne({ guildId });
+  if (!setup) {
+    setup = new ScrimSetup({ guildId });
+  }
 
+  // Setup Scrims Panel
   if (customId === 'setup_scrims') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
@@ -41,36 +45,41 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       embeds: [embed],
       components: [row1, row2],
-      ephemeral: true
+      flags: 64 // 👈 Replaces ephemeral: true
     });
   }
 
+  // A️⃣ Registration Channel Setup
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
-      .map(c => ({ label: `#${c.name}`, value: c.id }))
-      .slice(0, 25);
+      .map(c => ({
+        label: `#${c.name}`,
+        value: c.id
+      }))
+      .slice(0, 25); // Discord max select options = 25
+
+    const menu = {
+      type: 1,
+      components: [
+        {
+          type: 3,
+          custom_id: 'select_reg_channel',
+          placeholder: 'Choose a registration channel...',
+          options
+        }
+      ]
+    };
 
     return interaction.reply({
       content: '📥 Select a registration channel:',
-      ephemeral: true,
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 3,
-              custom_id: 'select_reg_channel',
-              placeholder: 'Choose a channel...',
-              options
-            }
-          ]
-        }
-      ]
+      components: [menu],
+      flags: 64
     });
   }
 
-  if (interaction.isSelectMenu() && interaction.customId === 'select_reg_channel') {
+  // Dropdown: Registration Channel selected
+  if (interaction.isStringSelectMenu() && interaction.customId === 'select_reg_channel') {
     const selectedChannelId = interaction.values[0];
     setup.registrationChannel = selectedChannelId;
     await setup.save();
