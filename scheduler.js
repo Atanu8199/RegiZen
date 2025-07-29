@@ -1,19 +1,17 @@
 const ScrimSetup = require('./models/ScrimSetup');
 const { ChannelType, PermissionsBitField } = require('discord.js');
+const moment = require('moment'); // ⏰ Ensure installed: `npm i moment`
 
 module.exports = async (client) => {
   setInterval(async () => {
-    const now = new Date();
+    const now = moment().format('HH:mm'); // '14:30' style
     const allSetups = await ScrimSetup.find();
 
     for (const setup of allSetups) {
       if (!setup.registrationOpenTime || !setup.registrationChannel) continue;
 
-      const regTime = new Date(setup.registrationOpenTime);
-      const diff = Math.abs(now - regTime);
-
-      // Allow a 60-second window
-      if (diff < 60000 && !setup.registrationOpened) {
+      // Compare time as string
+      if (setup.registrationOpenTime === now && !setup.registrationOpened) {
         const guild = client.guilds.cache.get(setup.guildId);
         if (!guild) continue;
 
@@ -21,26 +19,26 @@ module.exports = async (client) => {
         if (!regChannel || regChannel.type !== ChannelType.GuildText) continue;
 
         try {
-          // Unlock the registration channel (allow Send Messages)
+          // Unlock the registration channel
           await regChannel.permissionOverwrites.edit(guild.roles.everyone, {
             SendMessages: true
           });
 
           await regChannel.send('✅ **Registration is now OPEN!**\nPlease submit your team details in the required format.');
 
-          // Optional: log to rz-logs
+          // Log to rz-logs channel
           const logChannel = guild.channels.cache.find(c => c.name === 'rz-logs');
           if (logChannel) {
             await logChannel.send(`🟢 Registration channel <#${regChannel.id}> is now open.`);
           }
 
-          // Mark as opened (to prevent duplicate triggers)
+          // Mark as opened
           setup.registrationOpened = true;
           await setup.save();
         } catch (err) {
-          console.error(`Error opening channel for guild ${setup.guildId}:`, err);
+          console.error(`Error opening registration for guild ${setup.guildId}:`, err);
         }
       }
     }
-  }, 60000); // Runs every 60 seconds
+  }, 60 * 1000); // Every 1 minute
 };
