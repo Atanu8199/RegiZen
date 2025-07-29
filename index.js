@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 require('dotenv').config();
 
-// ✅ Create client with necessary intents
+// ✅ Initialize Discord client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -16,7 +16,6 @@ const client = new Client({
 // ✅ Load all commands from /commands folder
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.name, command);
@@ -24,7 +23,6 @@ for (const file of commandFiles) {
 
 // ✅ Load all events from /events folder
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
-
 for (const file of eventFiles) {
   const event = require(`./events/${file}`);
   if (event.once) {
@@ -34,17 +32,17 @@ for (const file of eventFiles) {
   }
 }
 
-// ✅ Manually handle interactionCreate (for buttons, modals, selects)
+// ✅ Manually handle interactionCreate for buttons, modals, selects
 client.on('interactionCreate', interaction => {
   require('./events/interactionCreate')(interaction, client);
 });
 
-// ✅ Manually handle messageCreate (for user message registrations)
+// ✅ Manually handle messageCreate for user registrations
 client.on('messageCreate', message => {
   require('./events/messageCreate')(message, client);
 });
 
-// ✅ Connect to MongoDB
+// ✅ Connect to MongoDB and start bot
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -52,10 +50,10 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => {
   console.log('🟢 Connected to MongoDB');
 
-  // ✅ Login the bot after DB is connected
+  // ✅ Login bot
   client.login(process.env.TOKEN);
 
-  // ✅ Start the scrim scheduler (for opening channels at scheduled time)
+  // ✅ Start scheduler (open channels at scheduled registration times)
   const scheduler = require('./scheduler');
   scheduler(client);
 })
