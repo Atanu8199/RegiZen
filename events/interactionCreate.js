@@ -11,7 +11,6 @@ const {
 } = require('discord.js');
 
 const ScrimSetup = require('../models/ScrimSetup');
-const ScrimRegistration = require('../models/ScrimRegistration');
 
 module.exports = async (interaction, client) => {
   if (!interaction.isButton() && !interaction.isSelectMenu() && !interaction.isModalSubmit()) return;
@@ -36,7 +35,7 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ embeds: [panelEmbed], components: [panelRow], ephemeral: true });
   }
 
-  // 📋 Create Scrim Configuration
+  // 📋 Scrim Config Menu
   if (customId === 'create_scrim') {
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
@@ -64,7 +63,7 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ embeds: [embed], components: [row1, row2, row3], ephemeral: true });
   }
 
-  // 🅰️ Registration Channel
+  // Individual config buttons:
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
@@ -74,11 +73,9 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       content: '📥 Select a registration channel:',
       ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new SelectMenuBuilder().setCustomId('select_reg_channel').setPlaceholder('Choose...').addOptions(options)
-        )
-      ]
+      components: [new ActionRowBuilder().addComponents(
+        new SelectMenuBuilder().setCustomId('select_reg_channel').setPlaceholder('Choose...').addOptions(options)
+      )]
     });
   }
 
@@ -91,7 +88,6 @@ module.exports = async (interaction, client) => {
     });
   }
 
-  // 🅱️ Mention Role
   if (customId === 'conf_B') {
     const options = interaction.guild.roles.cache
       .filter(r => r.name !== '@everyone')
@@ -101,11 +97,9 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       content: '🔔 Select a mention role:',
       ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new SelectMenuBuilder().setCustomId('select_mention_role').setPlaceholder('Choose...').addOptions(options)
-        )
-      ]
+      components: [new ActionRowBuilder().addComponents(
+        new SelectMenuBuilder().setCustomId('select_mention_role').setPlaceholder('Choose...').addOptions(options)
+      )]
     });
   }
 
@@ -115,7 +109,6 @@ module.exports = async (interaction, client) => {
     return interaction.update({ content: `✅ Mention role set to <@&${setup.mentionRoleId}>`, components: [] });
   }
 
-  // 🅲 Total Slots
   if (customId === 'conf_C') {
     const modal = new ModalBuilder()
       .setCustomId('modal_total_slots')
@@ -143,19 +136,16 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ content: `✅ Total slots set to: **${num}**`, ephemeral: true });
   }
 
-  // 🅳 Tag Count
   if (customId === 'conf_D') {
     return interaction.reply({
       content: '🧩 Select how many members must tag:',
       ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new SelectMenuBuilder()
-            .setCustomId('select_tag_count')
-            .setPlaceholder('Choose...')
-            .addOptions(['1', '2', '3', '4'].map(n => ({ label: n, value: n })))
-        )
-      ]
+      components: [new ActionRowBuilder().addComponents(
+        new SelectMenuBuilder()
+          .setCustomId('select_tag_count')
+          .setPlaceholder('Choose...')
+          .addOptions(['1', '2', '3', '4'].map(n => ({ label: n, value: n })))
+      )]
     });
   }
 
@@ -165,22 +155,19 @@ module.exports = async (interaction, client) => {
     return interaction.update({ content: `✅ Tag count set to: **${setup.tagCountRequired}**`, components: [] });
   }
 
-  // 🅴 Scrim Days
   if (customId === 'conf_E') {
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     return interaction.reply({
       content: '📅 Select scrim day(s):',
       ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new SelectMenuBuilder()
-            .setCustomId('select_scrim_days')
-            .setPlaceholder('Choose days...')
-            .setMinValues(1)
-            .setMaxValues(7)
-            .addOptions(days.map(d => ({ label: d, value: d })))
-        )
-      ]
+      components: [new ActionRowBuilder().addComponents(
+        new SelectMenuBuilder()
+          .setCustomId('select_scrim_days')
+          .setPlaceholder('Choose days...')
+          .setMinValues(1)
+          .setMaxValues(7)
+          .addOptions(days.map(d => ({ label: d, value: d })))
+      )]
     });
   }
 
@@ -190,7 +177,6 @@ module.exports = async (interaction, client) => {
     return interaction.update({ content: `✅ Scrim days set to: **${setup.scrimDays.join(', ')}**`, components: [] });
   }
 
-  // 🅵 Open Time
   if (customId === 'conf_F') {
     const modal = new ModalBuilder()
       .setCustomId('modal_open_time')
@@ -217,7 +203,6 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ content: `✅ Open time set to: **${time}**`, ephemeral: true });
   }
 
-  // 🅶 Success Role
   if (customId === 'conf_G') {
     const options = interaction.guild.roles.cache
       .filter(r => r.name !== '@everyone')
@@ -227,11 +212,9 @@ module.exports = async (interaction, client) => {
     return interaction.reply({
       content: '🏷️ Select a success role (optional):',
       ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new SelectMenuBuilder().setCustomId('select_success_role').setPlaceholder('Choose...').addOptions(options)
-        )
-      ]
+      components: [new ActionRowBuilder().addComponents(
+        new SelectMenuBuilder().setCustomId('select_success_role').setPlaceholder('Choose...').addOptions(options)
+      )]
     });
   }
 
@@ -241,7 +224,6 @@ module.exports = async (interaction, client) => {
     return interaction.update({ content: `✅ Success role set to <@&${setup.successRoleId}>`, components: [] });
   }
 
-  // 🅷 Reaction Emojis
   if (customId === 'conf_H') {
     const modal = new ModalBuilder()
       .setCustomId('modal_reaction_emojis')
@@ -251,7 +233,6 @@ module.exports = async (interaction, client) => {
           new TextInputBuilder()
             .setCustomId('reaction_emojis_input')
             .setLabel('Enter emojis (comma-separated)')
-            .setPlaceholder('e.g. ✅,🔥,💀')
             .setStyle(TextInputStyle.Short)
         )
       );
@@ -265,7 +246,6 @@ module.exports = async (interaction, client) => {
     return interaction.reply({ content: `✅ Emojis saved: ${setup.reactionEmojis.join(' ') || 'None'}`, ephemeral: true });
   }
 
-  // ✅ SAVE BUTTON — Check all fields before saving
   if (customId === 'save_scrim_config') {
     const missing = [];
     if (!setup.channelId) missing.push('A️⃣ Registration Channel');
@@ -286,28 +266,5 @@ module.exports = async (interaction, client) => {
 
     await setup.save();
     return interaction.reply({ content: '✅ All scrim settings saved successfully!', ephemeral: true });
-  }
-
-  // ✅ Team Registration Modal Submit
-  if (interaction.isModalSubmit() && interaction.customId === 'submit_team_name') {
-    const teamName = interaction.fields.getTextInputValue('team_name_input');
-    const alreadyRegistered = await ScrimRegistration.findOne({
-      guildId: interaction.guildId,
-      channelId: interaction.channelId,
-      userId: interaction.user.id
-    });
-
-    if (alreadyRegistered) {
-      return interaction.reply({ content: '❌ You already registered in this scrim.', ephemeral: true });
-    }
-
-    await ScrimRegistration.create({
-      guildId: interaction.guildId,
-      channelId: interaction.channelId,
-      userId: interaction.user.id,
-      teamName
-    });
-
-    return interaction.reply({ content: `✅ Registered with team name: **${teamName}**`, ephemeral: true });
   }
 };
