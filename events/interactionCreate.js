@@ -7,7 +7,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ModalBuilder,
-  SelectMenuBuilder
+  StringSelectMenuBuilder
 } = require('discord.js');
 
 const ScrimSetup = require('../models/ScrimSetup');
@@ -20,6 +20,8 @@ module.exports = async (interaction, client) => {
 
   // 🎛 Admin Panel
   if (customId === 'setup_scrims') {
+    await interaction.deferReply({ ephemeral: true });
+
     const panelEmbed = new EmbedBuilder()
       .setTitle('📢 Scrim Admin Panel')
       .setDescription('Select an option below to manage your scrims.')
@@ -32,11 +34,13 @@ module.exports = async (interaction, client) => {
       new ButtonBuilder().setCustomId('toggle_registration').setLabel('🟢 Start/Stop Registration').setStyle(ButtonStyle.Primary)
     );
 
-    return interaction.reply({ embeds: [panelEmbed], components: [panelRow], ephemeral: true });
+    return interaction.editReply({ embeds: [panelEmbed], components: [panelRow] });
   }
 
   // 📋 Scrim Config Menu
   if (customId === 'create_scrim') {
+    await interaction.deferReply({ ephemeral: true });
+
     const embed = new EmbedBuilder()
       .setTitle('📋 Create Scrim Configuration')
       .setDescription(`Click the buttons below to configure your scrim:\n\nA️⃣ Registration Channel\nB️⃣ Mention Role\nC️⃣ Total Slots\nD️⃣ Tag Count Required\nE️⃣ Scrim Day(s)\nF️⃣ Open Time\nG️⃣ Success Role\nH️⃣ Reaction Emojis`)
@@ -60,10 +64,10 @@ module.exports = async (interaction, client) => {
       new ButtonBuilder().setCustomId('save_scrim_config').setLabel('✅ Save Settings').setStyle(ButtonStyle.Success)
     );
 
-    return interaction.reply({ embeds: [embed], components: [row1, row2, row3], ephemeral: true });
+    return interaction.editReply({ embeds: [embed], components: [row1, row2, row3] });
   }
 
-  // Individual config buttons:
+  // Config options
   if (customId === 'conf_A') {
     const options = interaction.guild.channels.cache
       .filter(c => c.type === ChannelType.GuildText)
@@ -74,7 +78,7 @@ module.exports = async (interaction, client) => {
       content: '📥 Select a registration channel:',
       ephemeral: true,
       components: [new ActionRowBuilder().addComponents(
-        new SelectMenuBuilder().setCustomId('select_reg_channel').setPlaceholder('Choose...').addOptions(options)
+        new StringSelectMenuBuilder().setCustomId('select_reg_channel').setPlaceholder('Choose...').addOptions(options)
       )]
     });
   }
@@ -98,7 +102,7 @@ module.exports = async (interaction, client) => {
       content: '🔔 Select a mention role:',
       ephemeral: true,
       components: [new ActionRowBuilder().addComponents(
-        new SelectMenuBuilder().setCustomId('select_mention_role').setPlaceholder('Choose...').addOptions(options)
+        new StringSelectMenuBuilder().setCustomId('select_mention_role').setPlaceholder('Choose...').addOptions(options)
       )]
     });
   }
@@ -141,7 +145,7 @@ module.exports = async (interaction, client) => {
       content: '🧩 Select how many members must tag:',
       ephemeral: true,
       components: [new ActionRowBuilder().addComponents(
-        new SelectMenuBuilder()
+        new StringSelectMenuBuilder()
           .setCustomId('select_tag_count')
           .setPlaceholder('Choose...')
           .addOptions(['1', '2', '3', '4'].map(n => ({ label: n, value: n })))
@@ -161,7 +165,7 @@ module.exports = async (interaction, client) => {
       content: '📅 Select scrim day(s):',
       ephemeral: true,
       components: [new ActionRowBuilder().addComponents(
-        new SelectMenuBuilder()
+        new StringSelectMenuBuilder()
           .setCustomId('select_scrim_days')
           .setPlaceholder('Choose days...')
           .setMinValues(1)
@@ -213,7 +217,7 @@ module.exports = async (interaction, client) => {
       content: '🏷️ Select a success role (optional):',
       ephemeral: true,
       components: [new ActionRowBuilder().addComponents(
-        new SelectMenuBuilder().setCustomId('select_success_role').setPlaceholder('Choose...').addOptions(options)
+        new StringSelectMenuBuilder().setCustomId('select_success_role').setPlaceholder('Choose...').addOptions(options)
       )]
     });
   }
@@ -247,6 +251,8 @@ module.exports = async (interaction, client) => {
   }
 
   if (customId === 'save_scrim_config') {
+    await interaction.deferReply({ ephemeral: true });
+
     const missing = [];
     if (!setup.channelId) missing.push('A️⃣ Registration Channel');
     if (!setup.mentionRoleId) missing.push('B️⃣ Mention Role');
@@ -258,13 +264,12 @@ module.exports = async (interaction, client) => {
     if (!setup.reactionEmojis || setup.reactionEmojis.length === 0) missing.push('H️⃣ Reaction Emojis');
 
     if (missing.length > 0) {
-      return interaction.reply({
-        content: `❌ Cannot save. Please complete the following:\n${missing.join('\n')}`,
-        ephemeral: true
+      return interaction.editReply({
+        content: `❌ Cannot save. Please complete the following:\n${missing.join('\n')}`
       });
     }
 
     await setup.save();
-    return interaction.reply({ content: '✅ All scrim settings saved successfully!', ephemeral: true });
+    return interaction.editReply({ content: '✅ All scrim settings saved successfully!' });
   }
 };
